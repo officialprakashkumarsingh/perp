@@ -5,32 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AhamAI</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- Preload fonts or icons if needed, using unicode for icons to keep it simple -->
 </head>
 <body>
-    <header>
-        <div class="logo">AhamAI</div>
-    </header>
-
-    <main id="chat-container">
-        <!-- Messages will appear here -->
-        <div class="message bot-message">
-            <div class="message-content">Hello! I'm AhamAI. How can I help you today?</div>
-        </div>
-    </main>
-
-    <div class="input-area">
-        <form id="input-form">
-            <select id="model-select" aria-label="Select Model"></select>
-            <div class="input-wrapper">
-                <textarea id="user-input" placeholder="Ask anything..." rows="1" required></textarea>
-                <button type="submit" aria-label="Send">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">✱</span> AhamAI
+                </div>
+                <button id="new-chat-btn" aria-label="New Thread" title="New Thread">
+                    <span>+ New Thread</span>
                 </button>
             </div>
-        </form>
+
+            <div class="history-container">
+                <div class="history-label">Library</div>
+                <ul id="history-list" class="history-list">
+                    <!-- History items will be injected here -->
+                </ul>
+            </div>
+
+            <div class="sidebar-footer">
+                <!-- Footer content like Settings could go here -->
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Mobile Header -->
+            <header class="mobile-header">
+                <button id="sidebar-toggle" aria-label="Menu">☰</button>
+                <div class="logo">AhamAI</div>
+                <div class="spacer"></div>
+            </header>
+
+            <div id="chat-container" class="chat-container">
+                <!-- Welcome Screen (Initial State) -->
+                <div id="welcome-screen" class="welcome-screen">
+                    <h1>What do you want to know?</h1>
+                </div>
+
+                <!-- Messages will appear here -->
+                <div id="messages-list" class="messages-list"></div>
+            </div>
+
+            <div class="input-area-container">
+                <div class="input-area">
+                    <form id="input-form">
+                        <div class="input-top-row">
+                            <textarea id="user-input" placeholder="Ask anything..." rows="1" required></textarea>
+                        </div>
+                        <div class="input-bottom-row">
+                            <div class="left-controls">
+                                <button type="button" id="search-toggle" class="toggle-btn" aria-pressed="false" title="Toggle Web Search">
+                                    <span class="toggle-icon">🌐</span> <span class="toggle-text">Search</span>
+                                </button>
+                                <select id="model-select" class="model-select" aria-label="Select Model"></select>
+                            </div>
+                            <div class="right-controls">
+                                <button type="submit" id="send-btn" aria-label="Send" disabled>
+                                    <span class="arrow-icon">→</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="footer-text">
+                    AhamAI can make mistakes. Please verify important information.
+                </div>
+            </div>
+        </main>
     </div>
 
     <script src="js/config.js"></script>

@@ -1,13 +1,44 @@
 class UIHandler {
     constructor() {
-        this.chatContainer = document.getElementById('chat-container');
-        this.inputForm = document.getElementById('input-form');
-        this.inputField = document.getElementById('user-input');
+        this.messagesList = document.getElementById('messages-list');
+        this.userInput = document.getElementById('user-input');
         this.modelSelect = document.getElementById('model-select');
+        this.searchToggle = document.getElementById('search-toggle');
+        this.sendBtn = document.getElementById('send-btn');
+        this.sidebar = document.getElementById('sidebar');
+        this.sidebarToggle = document.getElementById('sidebar-toggle');
+        this.welcomeScreen = document.getElementById('welcome-screen');
+        this.historyList = document.getElementById('history-list');
+        this.newChatBtn = document.getElementById('new-chat-btn');
+        this.onDeleteChat = null;
+        this.onLoadChat = null;
     }
 
-    init(onSubmit) {
-        // Populate model selector
+    init(onSubmit, onHistoryAction) {
+        // Auto-resize textarea
+        this.userInput.addEventListener('input', () => {
+            this.userInput.style.height = 'auto';
+            this.userInput.style.height = (this.userInput.scrollHeight) + 'px';
+            this.sendBtn.disabled = this.userInput.value.trim().length === 0;
+        });
+
+        // Submit on Enter (without Shift)
+        this.userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!this.sendBtn.disabled) {
+                    this.submitForm(onSubmit);
+                }
+            }
+        });
+
+        // Form Submit
+        document.getElementById('input-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.submitForm(onSubmit);
+        });
+
+        // Model Select
         CONFIG.MODELS.forEach(model => {
             const option = document.createElement('option');
             option.value = model;
@@ -15,115 +46,217 @@ class UIHandler {
             this.modelSelect.appendChild(option);
         });
 
-        this.inputForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const query = this.inputField.value.trim();
-            if (query) {
-                this.inputField.value = '';
-                onSubmit(query, this.modelSelect.value);
+        // Search Toggle
+        this.searchToggle.addEventListener('click', () => {
+            const isPressed = this.searchToggle.getAttribute('aria-pressed') === 'true';
+            this.searchToggle.setAttribute('aria-pressed', !isPressed);
+        });
+
+        // Sidebar Toggle (Mobile)
+        if (this.sidebarToggle) {
+            this.sidebarToggle.addEventListener('click', () => {
+                this.sidebar.classList.toggle('open');
+            });
+        }
+
+        // New Chat Button
+        this.newChatBtn.addEventListener('click', () => {
+            if (onHistoryAction) onHistoryAction('new');
+            // Close mobile sidebar
+            this.sidebar.classList.remove('open');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                if (!this.sidebar.contains(e.target) && !this.sidebarToggle.contains(e.target) && this.sidebar.classList.contains('open')) {
+                    this.sidebar.classList.remove('open');
+                }
             }
         });
 
-        // Auto-resize textarea
-        this.inputField.addEventListener('input', () => {
-             this.inputField.style.height = 'auto';
-             this.inputField.style.height = (this.inputField.scrollHeight) + 'px';
-        });
+        // Setup History Actions callbacks
+        this.onHistoryAction = onHistoryAction;
     }
 
-    appendUserMessage(message) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message user-message';
-        messageDiv.textContent = message;
-        this.chatContainer.appendChild(messageDiv);
+    submitForm(onSubmit) {
+        const text = this.userInput.value.trim();
+        if (!text) return;
+
+        const model = this.modelSelect.value;
+        const isSearchEnabled = this.searchToggle.getAttribute('aria-pressed') === 'true';
+
+        this.userInput.value = '';
+        this.userInput.style.height = 'auto';
+        this.sendBtn.disabled = true;
+
+        // Hide welcome screen
+        this.welcomeScreen.style.display = 'none';
+
+        onSubmit(text, model, isSearchEnabled);
+    }
+
+    appendUserMessage(text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message';
+        msgDiv.innerHTML = `
+            <div class="user-message-container">
+                <div class="user-message">${this.escapeHtml(text)}</div>
+            </div>
+        `;
+        this.messagesList.appendChild(msgDiv);
         this.scrollToBottom();
     }
 
     createBotMessageContainer() {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message bot-message';
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message';
 
+        // Structure: Sources (optional) + Content
         const sourcesDiv = document.createElement('div');
-        sourcesDiv.className = 'sources-container';
-        messageDiv.appendChild(sourcesDiv);
+        sourcesDiv.className = 'sources-section';
+        sourcesDiv.style.display = 'none'; // Hidden initially
 
         const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content';
-        messageDiv.appendChild(contentDiv);
+        contentDiv.className = 'bot-message-container';
 
-        this.chatContainer.appendChild(messageDiv);
+        const textDiv = document.createElement('div');
+        textDiv.className = 'bot-message-content';
+
+        contentDiv.appendChild(textDiv);
+        msgDiv.appendChild(sourcesDiv);
+        msgDiv.appendChild(contentDiv);
+
+        this.messagesList.appendChild(msgDiv);
         this.scrollToBottom();
-        return { messageDiv, sourcesDiv, contentDiv };
+
+        return { messageDiv: msgDiv, sourcesDiv, contentDiv: textDiv };
     }
 
-    updateBotMessage(contentDiv, text) {
-        // Simple markdown parsing could go here, for now just text
-        // Using innerHTML to allow basic formatting if needed, but need to be careful with XSS.
-        // For this task, plain text appending is safer and simpler, but I'll replace newlines with <br>
-        contentDiv.innerHTML += text.replace(/\n/g, '<br>');
-        this.scrollToBottom();
-    }
-
-    renderSources(sourcesDiv, sources) {
+    renderSources(container, sources) {
         if (!sources || sources.length === 0) return;
 
-        const sourcesTitle = document.createElement('div');
-        sourcesTitle.className = 'sources-title';
-        sourcesTitle.textContent = 'Sources';
-        sourcesDiv.appendChild(sourcesTitle);
-
-        const list = document.createElement('div');
-        list.className = 'sources-list';
-
-        sources.forEach((source, index) => {
-            const item = document.createElement('a');
-            item.href = source.url;
-            item.target = '_blank';
-            item.className = 'source-item';
-
-            const favicon = document.createElement('img');
-            favicon.src = `https://www.google.com/s2/favicons?domain=${new URL(source.url).hostname}`;
-            favicon.className = 'source-icon';
-
-            const title = document.createElement('span');
-            title.textContent = source.title.length > 30 ? source.title.substring(0, 30) + '...' : source.title;
-            title.className = 'source-title-text';
-
-            const indexSpan = document.createElement('span');
-            indexSpan.textContent = index + 1;
-            indexSpan.className = 'source-index';
-
-            item.appendChild(indexSpan);
-            item.appendChild(favicon);
-            item.appendChild(title);
-            list.appendChild(item);
-        });
-        sourcesDiv.appendChild(list);
+        container.style.display = 'block';
+        container.innerHTML = `
+            <div class="sources-header">
+                <span class="sources-icon">≡</span> Sources
+            </div>
+            <div class="sources-grid">
+                ${sources.map((source, index) => `
+                    <a href="${source.url}" target="_blank" class="source-card" title="${this.escapeHtml(source.title)}">
+                        <div class="source-title">${this.escapeHtml(source.title)}</div>
+                        <div class="source-index">${index + 1}</div>
+                        <div class="source-url">${new URL(source.url).hostname}</div>
+                    </a>
+                `).join('')}
+            </div>
+        `;
     }
 
     showLoading(container) {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'loading-indicator';
-        loadingDiv.textContent = 'Thinking...';
-        container.appendChild(loadingDiv);
-        return loadingDiv;
+        container.innerHTML = '<div class="loading-indicator">Thinking...</div>';
+        return container.querySelector('.loading-indicator');
     }
 
-    removeLoading(loadingDiv) {
-        if (loadingDiv && loadingDiv.parentNode) {
-            loadingDiv.parentNode.removeChild(loadingDiv);
-        }
+    removeLoading(loadingElement) {
+        if (loadingElement) loadingElement.remove();
+    }
+
+    updateBotMessage(container, text) {
+        // Simple markdown parsing (bold, code blocks)
+        // For a full app, use a library like marked.js. Here we do basic replacement.
+        // Doing a full innerHTML replace on every chunk is inefficient but functional for this scope.
+        // We'll just append text for streaming effect or set innerHTML if we parse markdown.
+
+        // Let's do basic formatting
+        let formatted = this.parseMarkdown(text);
+        container.innerHTML = formatted;
+        this.scrollToBottom();
+    }
+
+    parseMarkdown(text) {
+        // Basic parser
+        let html = this.escapeHtml(text);
+
+        // Bold
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Code blocks
+        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+        // Inline code
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        // Newlines
+        html = html.replace(/\n/g, '<br>');
+
+        return html;
+    }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     scrollToBottom() {
-        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+        const container = document.getElementById('chat-container');
+        container.scrollTop = container.scrollHeight;
     }
 
     showError(message) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'message error-message';
-        errorDiv.textContent = message;
-        this.chatContainer.appendChild(errorDiv);
-        this.scrollToBottom();
+        const div = document.createElement('div');
+        div.className = 'message error-message';
+        div.style.color = 'red';
+        div.textContent = message;
+        this.messagesList.appendChild(div);
+    }
+
+    // History UI Methods
+    renderHistory(chats, currentChatId) {
+        this.historyList.innerHTML = '';
+
+        // Sort by date desc
+        const sortedChats = [...chats].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        sortedChats.forEach(chat => {
+            const li = document.createElement('li');
+            li.className = `history-item ${chat.id === currentChatId ? 'active' : ''}`;
+            li.innerHTML = `
+                <span class="history-title">${this.escapeHtml(chat.title || 'New Chat')}</span>
+                <div class="history-actions">
+                    <button class="history-action-btn delete-btn" title="Delete">×</button>
+                </div>
+            `;
+
+            // Click to load
+            li.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('history-action-btn')) {
+                    if (this.onHistoryAction) this.onHistoryAction('load', chat.id);
+                    // Mobile: close sidebar
+                    if (window.innerWidth <= 768) this.sidebar.classList.remove('open');
+                }
+            });
+
+            // Delete action
+            const deleteBtn = li.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm('Delete this chat?')) {
+                    if (this.onHistoryAction) this.onHistoryAction('delete', chat.id);
+                }
+            });
+
+            this.historyList.appendChild(li);
+        });
+    }
+
+    clearChat() {
+        this.messagesList.innerHTML = '';
+        this.welcomeScreen.style.display = 'flex';
     }
 }
