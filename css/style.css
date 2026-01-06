@@ -10,6 +10,7 @@
     --bot-msg-bg: transparent;
     --input-bg: #fff;
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    --logo-font: 'Fira Code', 'Courier New', Courier, monospace;
     --sidebar-width: 260px;
 }
 
@@ -49,13 +50,15 @@ body {
 }
 
 .logo {
-    font-size: 1.25rem;
+    font-size: 1.4rem;
     font-weight: 700;
+    font-family: var(--logo-font);
     display: flex;
     align-items: center;
     gap: 0.5rem;
     color: var(--text-primary);
     margin-bottom: 1.5rem;
+    letter-spacing: -0.5px;
 }
 
 .logo-icon {
@@ -176,7 +179,7 @@ body {
 .chat-container {
     flex: 1;
     overflow-y: auto;
-    padding: 0 1rem 8rem 1rem; /* Bottom padding for input area */
+    padding: 0 1rem 12rem 1rem; /* Increased Bottom padding for input area visibility */
     display: flex;
     flex-direction: column;
     max-width: 800px;
@@ -456,34 +459,73 @@ textarea {
 
 /* Markdown Styles within messages */
 .bot-message-content p {
-    margin-bottom: 0.8rem;
+    margin-bottom: 1rem;
+    line-height: 1.6;
 }
-.bot-message-content h1, .bot-message-content h2, .bot-message-content h3 {
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
+.bot-message-content h1, .bot-message-content h2, .bot-message-content h3, .bot-message-content h4, .bot-message-content h5, .bot-message-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
     font-weight: 600;
+    line-height: 1.3;
 }
 .bot-message-content ul, .bot-message-content ol {
     margin-left: 1.5rem;
-    margin-bottom: 0.8rem;
+    margin-bottom: 1rem;
+}
+.bot-message-content li {
+    margin-bottom: 0.5rem;
 }
 .bot-message-content code {
-    background-color: #f5f5f5;
+    background-color: #f2f2f2;
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
-    font-family: monospace;
-    font-size: 0.9em;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.85em;
+    color: #eb5757;
 }
 .bot-message-content pre {
-    background-color: #f5f5f5;
+    background-color: #f8f9fa;
     padding: 1rem;
     border-radius: 8px;
     overflow-x: auto;
     margin-bottom: 1rem;
+    border: 1px solid #e5e5e5;
 }
 .bot-message-content pre code {
     background-color: transparent;
     padding: 0;
+    color: #333;
+    font-size: 0.9em;
+}
+.bot-message-content blockquote {
+    border-left: 4px solid var(--accent-color);
+    margin: 1rem 0;
+    padding: 0.5rem 0 0.5rem 1rem;
+    background-color: #f9f9f9;
+    color: #555;
+}
+.bot-message-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+.bot-message-content th, .bot-message-content td {
+    border: 1px solid #ddd;
+    padding: 0.75rem;
+    text-align: left;
+}
+.bot-message-content th {
+    background-color: #f4f4f4;
+    font-weight: 600;
+}
+.bot-message-content tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.bot-message-content hr {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 2rem 0;
 }
 
 /* Mobile Responsive */
@@ -504,10 +546,18 @@ textarea {
     }
 
     .input-area-container {
-        padding: 0.5rem 0.5rem 1rem 0.5rem;
+        padding: 0.5rem 0.5rem 1.5rem 0.5rem;
+        background: var(--bg-color); /* Solid background on mobile to prevent overlay issues */
+        border-top: 1px solid var(--border-color);
     }
 
     .chat-container {
-        padding-bottom: 10rem;
+        padding-bottom: 14rem; /* Extra padding for mobile input area */
+    }
+
+    /* Ensure logo in mobile header also uses code font */
+    .mobile-header .logo {
+        margin-bottom: 0;
+        font-size: 1.2rem;
     }
 }

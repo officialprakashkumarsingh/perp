@@ -163,34 +163,20 @@ class UIHandler {
     }
 
     updateBotMessage(container, text) {
-        // Simple markdown parsing (bold, code blocks)
-        // For a full app, use a library like marked.js. Here we do basic replacement.
-        // Doing a full innerHTML replace on every chunk is inefficient but functional for this scope.
-        // We'll just append text for streaming effect or set innerHTML if we parse markdown.
+        // Using marked.js for full markdown support
+        if (typeof marked !== 'undefined') {
+            container.innerHTML = marked.parse(text);
+        } else {
+            container.textContent = text; // Fallback
+        }
 
-        // Let's do basic formatting
-        let formatted = this.parseMarkdown(text);
-        container.innerHTML = formatted;
+        // Enhance links to open in new tab
+        container.querySelectorAll('a').forEach(link => {
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+        });
+
         this.scrollToBottom();
-    }
-
-    parseMarkdown(text) {
-        // Basic parser
-        let html = this.escapeHtml(text);
-
-        // Bold
-        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-        // Code blocks
-        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-
-        // Inline code
-        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-        // Newlines
-        html = html.replace(/\n/g, '<br>');
-
-        return html;
     }
 
     escapeHtml(text) {
