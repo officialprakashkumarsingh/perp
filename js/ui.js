@@ -10,10 +10,11 @@ class UIHandler {
         this.welcomeScreen = document.getElementById('welcome-screen');
         this.historyList = document.getElementById('history-list');
         this.newChatBtn = document.getElementById('new-chat-btn');
+        this.settingsBtn = document.getElementById('settings-btn');
+        this.settingsModal = document.getElementById('settings-modal');
         this.fileInput = null;
         this.currentAttachment = null;
-        this.onDeleteChat = null;
-        this.onLoadChat = null;
+        this.onHistoryAction = null;
 
         // Initialize Mermaid
         if (typeof mermaid !== 'undefined') {
@@ -21,7 +22,7 @@ class UIHandler {
         }
     }
 
-    init(onSubmit, onHistoryAction) {
+    init(onSubmit, onHistoryAction, onSaveSettings) {
         // Create file input hidden
         this.fileInput = document.createElement('input');
         this.fileInput.type = 'file';
@@ -95,6 +96,31 @@ class UIHandler {
             // Close mobile sidebar
             this.sidebar.classList.remove('open');
         });
+
+        // Settings Modal
+        if (this.settingsBtn && this.settingsModal) {
+            this.settingsBtn.addEventListener('click', () => {
+                this.settingsModal.classList.add('open');
+                const savedInstructions = localStorage.getItem('ahamai_custom_instructions') || '';
+                document.getElementById('custom-instructions').value = savedInstructions;
+            });
+
+            this.settingsModal.querySelector('.close-modal').addEventListener('click', () => {
+                this.settingsModal.classList.remove('open');
+            });
+
+            this.settingsModal.querySelector('#save-settings-btn').addEventListener('click', () => {
+                const instructions = document.getElementById('custom-instructions').value;
+                if (onSaveSettings) onSaveSettings(instructions);
+                this.settingsModal.classList.remove('open');
+            });
+
+            window.addEventListener('click', (e) => {
+                if (e.target === this.settingsModal) {
+                    this.settingsModal.classList.remove('open');
+                }
+            });
+        }
 
         // Close sidebar when clicking outside on mobile
         document.addEventListener('click', (e) => {
@@ -225,11 +251,6 @@ class UIHandler {
     }
 
     updateBotMessage(container, text) {
-        // Pre-process Latex (simple block detection to avoid markdown messing it up?)
-        // Actually, let's just use marked.js and then render KaTeX on the result.
-        // Marked might escape some characters used in LaTeX.
-        // Ideally we use a marked extension, but here we can try a multi-pass approach.
-
         let markdownHtml = "";
         if (typeof marked !== 'undefined') {
             markdownHtml = marked.parse(text);
@@ -251,9 +272,6 @@ class UIHandler {
                 throwOnError : false
             });
         } else if (typeof katex !== 'undefined') {
-             // Manual regex replacement if auto-render not found (katex.min.js often doesn't include auto-render)
-             // But let's assume standard use pattern or fallback to manual replacement if needed.
-             // We will implement a basic manual render for $$ and $ if the auto-render function isn't globally available.
              this.renderLatexManual(container);
         }
 
@@ -278,6 +296,26 @@ class UIHandler {
              // Run mermaid
              mermaid.run({
                 querySelector: '.mermaid'
+             }).then(() => {
+                 // Add export buttons to generated diagrams
+                 const processedBlocks = container.querySelectorAll('.mermaid');
+                 processedBlocks.forEach(block => {
+                     // Check if already has button
+                     if (block.parentElement.classList.contains('diagram-container')) return;
+
+                     // Wrap in container
+                     const wrapper = document.createElement('div');
+                     wrapper.className = 'diagram-container';
+                     block.parentNode.insertBefore(wrapper, block);
+                     wrapper.appendChild(block);
+
+                     // Add button
+                     const btn = document.createElement('button');
+                     btn.className = 'export-btn';
+                     btn.innerHTML = '⬇️ Export';
+                     btn.onclick = () => this.exportDiagram(block);
+                     wrapper.appendChild(btn);
+                 });
              });
         }
 
@@ -290,10 +328,45 @@ class UIHandler {
         this.scrollToBottom();
     }
 
+    exportDiagram(block) {
+        const svg = block.querySelector('svg');
+        if (!svg) return;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const svgData = new XMLSerializer().serializeToString(svg);
+        const img = new Image();
+
+        // Get dimensions
+        const bbox = svg.getBoundingClientRect();
+        // Use a scale factor for higher resolution
+        const scale = 2;
+        canvas.width = bbox.width * scale;
+        canvas.height = bbox.height * scale;
+
+        // Handle SVG loading
+        const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+            ctx.scale(scale, scale);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width/scale, canvas.height/scale);
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(url);
+
+            // Trigger download
+            const a = document.createElement('a');
+            a.download = `diagram-${Date.now()}.png`;
+            a.href = canvas.toDataURL('image/png');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+        img.src = url;
+    }
+
     renderLatexManual(container) {
-        // Basic LaTeX rendering for elements containing $...$ or $$...$$
-        // This is tricky on already rendered HTML.
-        // It's safer to traverse text nodes.
         const walk = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
         let node;
         const nodesToReplace = [];
@@ -305,26 +378,7 @@ class UIHandler {
 
         nodesToReplace.forEach(node => {
             const text = node.nodeValue;
-            const span = document.createElement('span');
-            // Very naive regex for $$ and $
-            // Note: This might break if $ is part of code or normal text.
-            // But strict LaTeX delimiters usually work OK.
-
-            // We'll replace the content with HTML rendered by KaTeX
-            // Strategy: Split by $$ then by $
-            // Note: This implementation is illustrative. Robust LaTeX mixed with Markdown usually requires a tokenizer.
-            // But we'll do a simple "Render whole text if it looks like math" or try to substitute.
-
-            // Actually, let's just leave it to the user to provide clean LaTeX blocks if possible.
-            // Or try a simple replace.
-
             try {
-                 // Try parsing segments
-                 // $$...$$ -> Display Mode
-                 // $...$ -> Inline Mode
-
-                 // Because we are modifying the DOM, we need to be careful.
-                 // Let's use a wrapper that handles the html generation.
                  let html = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, tex) => {
                      return katex.renderToString(tex, { displayMode: true, throwOnError: false });
                  });
@@ -371,34 +425,73 @@ class UIHandler {
     renderHistory(chats, currentChatId) {
         this.historyList.innerHTML = '';
 
-        // Sort by date desc
-        const sortedChats = [...chats].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        // Sort: Pinned first, then by date (desc)
+        const sortedChats = [...chats].sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return new Date(b.timestamp) - new Date(a.timestamp);
+        });
 
         sortedChats.forEach(chat => {
             const li = document.createElement('li');
-            li.className = `history-item ${chat.id === currentChatId ? 'active' : ''}`;
-            li.innerHTML = `
-                <span class="history-title">${this.escapeHtml(chat.title || 'New Chat')}</span>
-                <div class="history-actions">
-                    <button class="history-action-btn delete-btn" title="Delete">×</button>
-                </div>
-            `;
+            li.className = `history-item ${chat.id === currentChatId ? 'active' : ''} ${chat.pinned ? 'pinned' : ''}`;
 
-            // Click to load
-            li.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('history-action-btn')) {
-                    if (this.onHistoryAction) this.onHistoryAction('load', chat.id);
-                    // Mobile: close sidebar
-                    if (window.innerWidth <= 768) this.sidebar.classList.remove('open');
+            const span = document.createElement('span');
+            span.className = 'history-title';
+            span.textContent = chat.title || 'New Chat';
+            span.title = chat.title || 'New Chat';
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'history-actions';
+
+            // Pin Button
+            const pinBtn = document.createElement('button');
+            pinBtn.className = 'history-action-btn';
+            pinBtn.innerHTML = chat.pinned ? '📍' : '📌';
+            pinBtn.title = chat.pinned ? 'Unpin' : 'Pin';
+            pinBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (this.onHistoryAction) this.onHistoryAction('pin', chat.id);
+            };
+
+            // Rename Button
+            const renameBtn = document.createElement('button');
+            renameBtn.className = 'history-action-btn';
+            renameBtn.innerHTML = '✏️';
+            renameBtn.title = 'Rename';
+            renameBtn.onclick = (e) => {
+                e.stopPropagation();
+                const newTitle = prompt("Rename chat:", chat.title);
+                if (newTitle) {
+                     if (this.onHistoryAction) this.onHistoryAction('rename', chat.id, newTitle);
                 }
-            });
+            };
 
             // Delete action
-            const deleteBtn = li.querySelector('.delete-btn');
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'history-action-btn delete-btn';
+            deleteBtn.innerHTML = '🗑️';
+            deleteBtn.title = 'Delete';
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (confirm('Delete this chat?')) {
                     if (this.onHistoryAction) this.onHistoryAction('delete', chat.id);
+                }
+            });
+
+            actionsDiv.appendChild(pinBtn);
+            actionsDiv.appendChild(renameBtn);
+            actionsDiv.appendChild(deleteBtn);
+
+            li.appendChild(span);
+            li.appendChild(actionsDiv);
+
+            // Click to load
+            li.addEventListener('click', (e) => {
+                if (!e.target.closest('.history-actions')) {
+                    if (this.onHistoryAction) this.onHistoryAction('load', chat.id);
+                    // Mobile: close sidebar
+                    if (window.innerWidth <= 768) this.sidebar.classList.remove('open');
                 }
             });
 

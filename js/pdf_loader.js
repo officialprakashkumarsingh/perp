@@ -1,12 +1,25 @@
 // Initialize PDF.js worker
+// Ensure we point to the correct worker location
 if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
 }
 
 const extractTextFromPDF = async (file) => {
+    if (!file) return "";
+
+    // Ensure pdfjsLib is available
+    if (typeof pdfjsLib === 'undefined') {
+        throw new Error("PDF.js library is not loaded.");
+    }
+
     try {
         const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        // Use typed array for better compatibility
+        const typedArray = new Uint8Array(arrayBuffer);
+
+        const loadingTask = pdfjsLib.getDocument({ data: typedArray });
+        const pdf = await loadingTask.promise;
+
         let fullText = "";
 
         for (let i = 1; i <= pdf.numPages; i++) {

@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load initial history
     uiHandler.renderHistory(chatManager.chats, null);
 
-    const handleHistoryAction = (action, id) => {
+    const handleHistoryAction = (action, id, payload) => {
         if (action === 'new') {
             chatManager.currentChatId = null;
             uiHandler.clearChat();
@@ -87,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Replay messages
                 chat.messages.forEach(msg => {
                     if (msg.role === 'user') {
+                        // Strip attachment text for display if possible, or just show full
+                        // Since we append attachment text to content, we might show it.
+                        // Ideally we'd store display text separately, but for now simple replay:
                         uiHandler.appendUserMessage(msg.content);
                     } else if (msg.role === 'assistant') {
                         const { messageDiv, sourcesDiv, contentDiv } = uiHandler.createBotMessageContainer();
@@ -100,7 +103,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (action === 'delete') {
             chatManager.deleteChat(id);
+        } else if (action === 'pin') {
+            const chat = chatManager.getChat(id);
+            if (chat) {
+                chat.pinned = !chat.pinned;
+                chatManager.saveChats();
+            }
+        } else if (action === 'rename') {
+            const chat = chatManager.getChat(id);
+            if (chat) {
+                chat.title = payload; // payload is newTitle
+                chatManager.saveChats();
+            }
         }
+    };
+
+    const handleSaveSettings = (instructions) => {
+        localStorage.setItem('ahamai_custom_instructions', instructions);
+        // Optionally notify user
+        // uiHandler.showToast('Settings saved');
     };
 
     const handleUserSubmit = async (query, model, isSearchEnabled, attachment) => {
@@ -184,6 +205,12 @@ Instructions:
 - If the user asks to "draw" or "visualize" something, ALWAYS provide a Mermaid diagram if possible.
 - Be concise and helpful.
 `;
+            // Add Custom Instructions
+            const customInstructions = localStorage.getItem('ahamai_custom_instructions');
+            if (customInstructions && customInstructions.trim()) {
+                systemPrompt += `\n\nUSER CUSTOM INSTRUCTIONS (MUST FOLLOW):\n${customInstructions.trim()}\n`;
+            }
+
             if (searchContext) {
                 systemPrompt += searchContext;
             } else {
@@ -233,5 +260,5 @@ Instructions:
         });
     };
 
-    uiHandler.init(handleUserSubmit, handleHistoryAction);
+    uiHandler.init(handleUserSubmit, handleHistoryAction, handleSaveSettings);
 });
