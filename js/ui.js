@@ -57,7 +57,13 @@ class UIHandler {
         this.userInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (!this.sendBtn.disabled) {
+                // Check if it's send or stop mode
+                // Actually button disabled state handles "Send" logic blocking
+                // But "Stop" logic is triggered by click.
+                // If user presses enter while streaming, maybe stop?
+                // Standard behavior is usually do nothing or stop.
+                // We'll stick to button click for Stop to avoid accidental Enter stops.
+                if (!this.sendBtn.disabled && !this.sendBtn.classList.contains('stop-btn')) {
                     this.submitForm(onSubmit);
                 }
             }
@@ -66,7 +72,12 @@ class UIHandler {
         // Form Submit
         document.getElementById('input-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            this.submitForm(onSubmit);
+            // Handle Stop Logic if button is in stop mode
+            if (this.sendBtn.classList.contains('stop-btn')) {
+                if (this.onStop) this.onStop();
+            } else {
+                this.submitForm(onSubmit);
+            }
         });
 
         // Model Select
@@ -115,6 +126,38 @@ class UIHandler {
                 this.settingsModal.classList.remove('open');
             });
 
+            // Theme Toggle
+            const themeToggle = document.getElementById('theme-toggle');
+            themeToggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    document.body.classList.add('amoled-theme');
+                    localStorage.setItem('ahamai_theme', 'amoled');
+                } else {
+                    document.body.classList.remove('amoled-theme');
+                    localStorage.setItem('ahamai_theme', 'light');
+                }
+            });
+
+            // Data Controls
+            document.getElementById('export-all-btn').addEventListener('click', () => {
+                const chats = JSON.parse(localStorage.getItem('ahamai_chats') || '[]');
+                const blob = new Blob([JSON.stringify(chats, null, 2)], {type : 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ahamai-backup-${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+
+            document.getElementById('delete-all-btn').addEventListener('click', () => {
+                if (confirm("Are you sure you want to delete ALL chats? This cannot be undone.")) {
+                    if (this.onHistoryAction) this.onHistoryAction('delete_all');
+                    this.settingsModal.classList.remove('open');
+                }
+            });
+
             window.addEventListener('click', (e) => {
                 if (e.target === this.settingsModal) {
                     this.settingsModal.classList.remove('open');
@@ -145,13 +188,29 @@ class UIHandler {
 
         this.userInput.value = '';
         this.userInput.style.height = 'auto';
-        this.sendBtn.disabled = true;
+
+        // Switch to Stop Button
+        this.setStopMode(true);
         this.clearAttachment();
 
         // Hide welcome screen
         this.welcomeScreen.style.display = 'none';
 
         onSubmit(text, model, isSearchEnabled, attachment);
+    }
+
+    setStopMode(isStop) {
+        this.sendBtn.disabled = false; // Always enabled to allow interaction
+        if (isStop) {
+            this.sendBtn.classList.add('stop-btn');
+            this.sendBtn.innerHTML = '<span class="stop-icon">🟥</span>';
+            this.sendBtn.title = "Stop Generating";
+        } else {
+            this.sendBtn.classList.remove('stop-btn');
+            this.sendBtn.innerHTML = '<span class="arrow-icon">→</span>';
+            this.sendBtn.title = "Send";
+            this.sendBtn.disabled = this.userInput.value.trim().length === 0;
+        }
     }
 
     handleFileSelect(file) {
@@ -315,6 +374,40 @@ class UIHandler {
 
         container.innerHTML = markdownHtml;
 
+        // Presentation Detection
+        if (text.includes('<div class="slide">')) {
+            // Check if preview button exists
+            if (!container.querySelector('.presentation-preview-btn')) {
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'presentation-preview-btn';
+                previewBtn.innerHTML = '🎬 Preview Presentation';
+                previewBtn.onclick = () => this.showPresentationPreview(text);
+                container.insertBefore(previewBtn, container.firstChild);
+            }
+        }
+
+        // Code Block Preview
+        const codeBlocks = container.querySelectorAll('pre code');
+        codeBlocks.forEach(code => {
+            const pre = code.parentElement;
+            if (pre.querySelector('.code-header')) return; // Already processed
+
+            const lang = code.className.replace('language-', '');
+            if (['html', 'css', 'javascript', 'js'].includes(lang)) {
+                // Wrap content
+                const header = document.createElement('div');
+                header.className = 'code-header';
+
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'code-preview-btn';
+                previewBtn.innerHTML = '👁️ Preview';
+                previewBtn.onclick = () => this.showCodePreview(code.textContent, lang);
+
+                header.appendChild(previewBtn);
+                pre.insertBefore(header, code);
+            }
+        });
+
         // Render KaTeX
         if (typeof renderMathInElement !== 'undefined') {
              renderMathInElement(container, {
@@ -405,38 +498,47 @@ class UIHandler {
         const svg = block.querySelector('svg');
         if (!svg) return;
 
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        // Simplify export: Convert SVG directly to Data URL if possible, or use simpler canvas approach
+        // The issue with previous approach might be styles not being inline.
+        // Let's try to clone the node and ensure styles are computed?
+        // Or simpler: Just download the SVG itself if PNG is tricky without external libs like canvg.
+        // But user asked for image export. Canvas "tainted" is common issue if using external fonts/images.
+        // Since we have no external images in mermaid usually, it should be fine.
+        // Let's try explicitly setting width/height on SVG to avoid 0 size issues.
+
         const svgData = new XMLSerializer().serializeToString(svg);
+        const svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+        const svgUrl = URL.createObjectURL(svgBlob);
+
         const img = new Image();
-
-        // Get dimensions
-        const bbox = svg.getBoundingClientRect();
-        // Use a scale factor for higher resolution
-        const scale = 2;
-        canvas.width = bbox.width * scale;
-        canvas.height = bbox.height * scale;
-
-        // Handle SVG loading
-        const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
-        const url = URL.createObjectURL(svgBlob);
-
         img.onload = () => {
-            ctx.scale(scale, scale);
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width/scale, canvas.height/scale);
-            ctx.drawImage(img, 0, 0);
-            URL.revokeObjectURL(url);
+            const canvas = document.createElement("canvas");
+            // Use actual SVG viewbox or width/height if set
+            const bbox = svg.getBBox();
+            // Fallback to bounding client rect if getBBox is zero (happens if not in DOM or hidden)
+            const width = bbox.width || svg.getBoundingClientRect().width;
+            const height = bbox.height || svg.getBoundingClientRect().height;
 
-            // Trigger download
-            const a = document.createElement('a');
+            const scale = 2;
+            canvas.width = width * scale + 20; // Add padding
+            canvas.height = height * scale + 20;
+
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.scale(scale, scale);
+            ctx.drawImage(img, 10, 10, width, height); // Centered with padding
+
+            URL.revokeObjectURL(svgUrl);
+
+            const a = document.createElement("a");
             a.download = `diagram-${Date.now()}.png`;
-            a.href = canvas.toDataURL('image/png');
+            a.href = canvas.toDataURL("image/png");
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
         };
-        img.src = url;
+        img.src = svgUrl;
     }
 
     renderLatexManual(container) {
@@ -492,6 +594,73 @@ class UIHandler {
         div.style.color = 'red';
         div.textContent = message;
         this.messagesList.appendChild(div);
+    }
+
+    showPresentationPreview(html) {
+        // Create a full-screen modal
+        const modal = document.createElement('div');
+        modal.className = 'presentation-modal';
+        modal.innerHTML = `
+            <div class="presentation-controls">
+                <button class="close-pres">Close</button>
+                <button class="export-pres">Export PDF</button>
+            </div>
+            <div class="slides-container" id="slides-root">
+                ${html} <!-- Contains <div class="slide"> elements -->
+            </div>
+            <style>
+                .presentation-modal {
+                    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                    background: #333; z-index: 2000; overflow-y: auto;
+                    display: flex; flex-direction: column; align-items: center;
+                }
+                .presentation-controls {
+                    width: 100%; padding: 1rem; background: rgba(0,0,0,0.5);
+                    display: flex; justify-content: flex-end; gap: 1rem; position: sticky; top: 0;
+                }
+                .slides-container {
+                    width: 80%; max-width: 960px; padding: 2rem;
+                }
+                .slide {
+                    background: white; color: black; padding: 2rem; margin-bottom: 2rem;
+                    border-radius: 8px; min-height: 540px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                    page-break-after: always;
+                }
+                /* Basic reset inside slides */
+                .slide h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+                .slide ul { margin-left: 2rem; }
+
+                /* Theme Awareness */
+                body.amoled-theme .slide {
+                    background: #000; color: #fff; border: 1px solid #333;
+                }
+            </style>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('.close-pres').onclick = () => modal.remove();
+        modal.querySelector('.export-pres').onclick = () => {
+             const element = document.getElementById('slides-root');
+             const opt = {
+                margin: 0,
+                filename: 'presentation.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+            };
+            html2pdf().set(opt).from(element).save();
+        };
+    }
+
+    showCodePreview(code, lang) {
+        const win = window.open("", "Code Preview", "width=800,height=600");
+        let content = "";
+        if (lang === 'html') content = code;
+        else if (lang === 'css') content = `<style>${code}</style><h1>CSS Preview</h1>`;
+        else if (lang === 'js' || lang === 'javascript') content = `<script>${code}<\/script><h1>JS Executed (Check Console)</h1>`;
+
+        win.document.write(content);
+        win.document.close();
     }
 
     // History UI Methods

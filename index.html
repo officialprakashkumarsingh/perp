@@ -109,6 +109,18 @@
                 <label for="custom-instructions">Custom Instructions</label>
                 <textarea id="custom-instructions" rows="5" placeholder="Enter custom instructions for the AI (e.g., 'Be concise', 'Explain like I'm 5')..."></textarea>
                 <p class="helper-text">The AI will follow these instructions in every new chat.</p>
+
+                <h3>Theme</h3>
+                <label class="toggle-control">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="control-label">AMOLED Black Theme</span>
+                </label>
+
+                <h3>Data Control</h3>
+                <div class="data-controls">
+                    <button id="export-all-btn" class="secondary-btn">Export All Chats</button>
+                    <button id="delete-all-btn" class="danger-btn">Delete All Chats</button>
+                </div>
             </div>
             <div class="modal-footer">
                 <button id="save-settings-btn" class="primary-btn">Save</button>

@@ -381,6 +381,36 @@ body {
     color: var(--accent-color);
 }
 
+.stop-btn {
+    background-color: #ff4d4d !important;
+    border-color: #ff4d4d !important;
+}
+
+.stop-btn:hover {
+    background-color: #cc0000 !important;
+}
+
+.presentation-preview-btn, .code-preview-btn {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.code-header {
+    display: flex;
+    justify-content: flex-end;
+    background: #f0f0f0;
+    padding: 4px 8px;
+    border-bottom: 1px solid #ddd;
+    border-radius: 8px 8px 0 0;
+}
+
 .message-actions {
     display: flex;
     gap: 0.5rem;
@@ -756,12 +786,16 @@ textarea {
     overflow-x: auto;
     margin-bottom: 1rem;
     border: 1px solid #e5e5e5;
+    max-width: 100%; /* Ensure fit on mobile */
+    white-space: pre-wrap; /* Wrap long lines if desired, or keep scroll */
+    white-space: pre; /* Keep scroll for code */
 }
 .bot-message-content pre code {
     background-color: transparent;
     padding: 0;
     color: #333;
     font-size: 0.9em;
+    font-family: var(--font-mono);
 }
 .bot-message-content blockquote {
     border-left: 4px solid var(--accent-color);
@@ -792,6 +826,109 @@ textarea {
     border: none;
     border-top: 1px solid #eee;
     margin: 2rem 0;
+}
+
+/* Theme: AMOLED Black */
+.amoled-theme {
+    --bg-color: #000000;
+    --sidebar-bg: #000000;
+    --border-color: #333333;
+    --text-primary: #ffffff;
+    --text-secondary: #aaaaaa;
+    --user-msg-bg: #111111;
+    --input-bg: #111111;
+    --accent-color: #1e9b8f; /* Keep accent */
+}
+
+.amoled-theme .sidebar {
+    border-right-color: #333;
+}
+
+.amoled-theme .message-actions {
+    border-top-color: #333;
+}
+
+.amoled-theme .action-btn {
+    border-color: #333;
+    color: #ccc;
+}
+
+.amoled-theme .action-btn:hover {
+    background: #222;
+    color: #fff;
+}
+
+.amoled-theme .bot-message-content pre {
+    background-color: #111;
+    border-color: #333;
+}
+
+.amoled-theme .bot-message-content code {
+    color: #ff6b6b;
+    background-color: #222;
+}
+
+.amoled-theme .source-card {
+    background-color: #111;
+    color: #fff;
+}
+
+.amoled-theme .source-card:hover {
+    background-color: #222;
+}
+
+.amoled-theme .modal-content {
+    background-color: #111;
+    border-color: #333;
+}
+
+.amoled-theme .modal-body textarea {
+    background-color: #000;
+    color: #fff;
+    border-color: #333;
+}
+
+.amoled-theme #new-chat-btn {
+    background-color: #111;
+    border-color: #333;
+    color: #fff;
+}
+
+.amoled-theme #new-chat-btn:hover {
+    background-color: #222;
+}
+
+.amoled-theme .history-item:hover, .amoled-theme .history-item.active {
+    background-color: #222;
+}
+
+.amoled-theme .history-item.pinned {
+    background-color: #1a2a29; /* Dark teal tint */
+}
+
+/* Data Controls */
+.data-controls {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.secondary-btn {
+    background: #e0e0e0;
+    color: #333;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.danger-btn {
+    background: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 /* Mobile Responsive */

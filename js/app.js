@@ -71,6 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load initial history
     uiHandler.renderHistory(chatManager.chats, null);
 
+    // Check Theme
+    if (localStorage.getItem('ahamai_theme') === 'amoled') {
+        document.body.classList.add('amoled-theme');
+    }
+
     const handleHistoryAction = (action, id, payload) => {
         if (action === 'new') {
             chatManager.currentChatId = null;
@@ -115,6 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 chat.title = payload; // payload is newTitle
                 chatManager.saveChats();
             }
+        } else if (action === 'delete_all') {
+            chatManager.chats = [];
+            chatManager.currentChatId = null;
+            chatManager.saveChats();
+            uiHandler.clearChat();
         }
     };
 
@@ -153,7 +163,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const fullUserContent = query + attachmentText;
+        // Handle URL Reading
+        // Check for URLs in query
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urls = query.match(urlRegex);
+        let urlContext = "";
+
+        if (urls && urls.length > 0) {
+            uiHandler.showToast?.('Reading URLs...');
+            for (const url of urls) {
+                try {
+                    const content = await apiHandler.fetchPageContent(url);
+                    if (content) {
+                        urlContext += `\n\n--- Content from ${url} ---\n${content}\n--- End Content ---\n`;
+                    }
+                } catch (e) {
+                    console.error("Error reading URL", e);
+                }
+            }
+        }
+
+        const fullUserContent = query + attachmentText + urlContext;
 
         chatManager.addMessageToChat(chatManager.currentChatId, { role: 'user', content: fullUserContent });
 
@@ -162,6 +192,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let finalAnswer = "";
         let sources = [];
+        let abortController = new AbortController();
+
+        // Hook up Stop Logic
+        uiHandler.onStop = () => {
+            if (abortController) {
+                abortController.abort();
+                uiHandler.setStopMode(false);
+                uiHandler.removeLoading(loadingDiv);
+                // Finalize what we have
+                chatManager.addMessageToChat(chatManager.currentChatId, {
+                    role: 'assistant',
+                    content: finalAnswer + "\n[Stopped by user]",
+                    sources: sources
+                });
+            }
+        };
 
         try {
             // 1. Search Web (if enabled)
@@ -208,9 +254,23 @@ Capabilities:
    Example: \`![A futuristic city](https://image.pollinations.ai/prompt/futuristic%20city%20sunset?nologo=true)\`
    Do NOT use any other API or format. Generate images when the user explicitly asks or when it adds significant value.
 
+5. **Presentations**: You can generate stylish, themed presentations.
+   To do this, output a single HTML block containing multiple \`<div class="slide">\` elements.
+   Each slide should have inline CSS for styling (backgrounds, fonts, colors) based on the topic.
+   Do not use \`<html>\` or \`<body>\` tags, just the divs.
+   Example:
+   \`\`\`html
+   <div class="slide" style="background:linear-gradient(135deg, #1e3c72, #2a5298); color:white;">
+     <h1>Title</h1>
+     <ul><li>Point 1</li></ul>
+   </div>
+   <div class="slide" style="...">...</div>
+   \`\`\`
+
 Instructions:
 - If the user asks to "draw" or "visualize" a system, process, or chart, ALWAYS provide a Mermaid diagram.
 - If the user asks to "generate an image" or "show a picture", use the Pollinations AI markdown format.
+- If the user asks for a "presentation" or "slides", generate the HTML slide format described above.
 - Be concise and helpful.
 `;
             // Add Custom Instructions
@@ -249,9 +309,10 @@ Instructions:
             await apiHandler.chatCompletion(messages, model, (chunk) => {
                 fullResponse += chunk;
                 uiHandler.updateBotMessage(contentDiv, fullResponse);
-            });
+            }, abortController.signal);
 
             finalAnswer = fullResponse;
+            uiHandler.setStopMode(false);
 
             // Show Actions (Copy, Regenerate, Export)
             uiHandler.addMessageActions(actionsDiv, contentDiv, () => {
@@ -260,7 +321,12 @@ Instructions:
             });
 
         } catch (error) {
+            if (error.name === 'AbortError') {
+                 // Handled in onStop
+                 return;
+            }
             uiHandler.removeLoading(loadingDiv);
+            uiHandler.setStopMode(false);
             uiHandler.showError(`An error occurred: ${error.message}`);
             console.error(error);
             finalAnswer = "Error generating response.";
