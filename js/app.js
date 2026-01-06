@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiHandler = new APIHandler();
     const uiHandler = new UIHandler();
 
+    // Expose for testing/debugging
+    window.uiHandler = uiHandler;
+    window.apiHandler = apiHandler;
+
     // Chat History Manager
     const chatManager = {
         chats: JSON.parse(localStorage.getItem('ahamai_chats') || '[]'),
@@ -99,15 +103,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const handleUserSubmit = async (query, model, isSearchEnabled) => {
+    const handleUserSubmit = async (query, model, isSearchEnabled, attachment) => {
         // Ensure we have a chat session
         if (!chatManager.currentChatId) {
             const newChat = chatManager.createChat();
             chatManager.currentChatId = newChat.id;
         }
 
-        uiHandler.appendUserMessage(query);
-        chatManager.addMessageToChat(chatManager.currentChatId, { role: 'user', content: query });
+        let displayMessage = query;
+        if (attachment) {
+            displayMessage = `[Attachment: ${attachment.name}] ${query}`;
+        }
+
+        uiHandler.appendUserMessage(displayMessage);
+
+        // Handle PDF Text Extraction
+        let attachmentText = "";
+        if (attachment) {
+            try {
+                if (typeof extractTextFromPDF !== 'undefined') {
+                    const text = await extractTextFromPDF(attachment);
+                    attachmentText = `\n\n--- Attachment Content (${attachment.name}) ---\n${text}\n--- End Attachment ---\n`;
+                } else {
+                    attachmentText = `\n\n[System: Failed to load PDF extraction library.]`;
+                }
+            } catch (e) {
+                attachmentText = `\n\n[System: Failed to read attachment: ${e.message}]`;
+            }
+        }
+
+        const fullUserContent = query + attachmentText;
+
+        chatManager.addMessageToChat(chatManager.currentChatId, { role: 'user', content: fullUserContent });
 
         const { messageDiv, sourcesDiv, contentDiv } = uiHandler.createBotMessageContainer();
         const loadingDiv = uiHandler.showLoading(contentDiv);
@@ -118,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // 1. Search Web (if enabled)
             let searchContext = "";
-            if (isSearchEnabled) {
+            if (isSearchEnabled && query.trim().length > 0) { // Only search if there is a query
                 try {
                     const searchResults = await apiHandler.searchWeb(query);
                     sources = searchResults;
@@ -137,9 +164,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // 2. Prepare Context with Date/Time
+            // 2. Prepare Context with Date/Time and Capabilities
             const currentDate = new Date().toLocaleString();
-            let systemPrompt = `Current Date and Time: ${currentDate}. You are AhamAI, a helpful AI assistant.`;
+            let systemPrompt = `Current Date and Time: ${currentDate}. You are AhamAI, a helpful AI assistant.
+
+Capabilities:
+1. **Diagrams**: You can generate diagrams, flowcharts, graphs, and visualizations using Mermaid.js. When a user asks for a diagram, output a code block with the language set to \`mermaid\`.
+   Example:
+   \`\`\`mermaid
+   graph TD;
+     A-->B;
+   \`\`\`
+2. **Math & Science**: You can render mathematical and chemical formulas using LaTeX. Use standard LaTeX delimiters: $ for inline math and $$ for display math.
+   Example: The area is $A = \pi r^2$.
+
+3. **Attachments**: The user may provide text from attached PDF files. Use this context to answer questions.
+
+Instructions:
+- If the user asks to "draw" or "visualize" something, ALWAYS provide a Mermaid diagram if possible.
+- Be concise and helpful.
+`;
             if (searchContext) {
                 systemPrompt += searchContext;
             } else {
