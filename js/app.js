@@ -173,7 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const fullUserContent = query + attachmentText + urlContext;
 
-        chatManager.addMessageToChat(chatManager.currentChatId, { role: 'user', content: fullUserContent });
+        // Only save if not incognito
+        if (!uiHandler.isIncognito) {
+            chatManager.addMessageToChat(chatManager.currentChatId, { role: 'user', content: fullUserContent });
+        }
 
         const { messageDiv, sourcesDiv, contentDiv, actionsDiv } = uiHandler.createBotMessageContainer();
         const loadingDiv = uiHandler.showLoading(contentDiv);
@@ -257,9 +260,9 @@ Capabilities:
 
 6. **Screenshots**: You can show screenshots of websites.
    To display a screenshot, output a Markdown image using the WordPress mShots API:
-   \`![Screenshot of URL](https://s0.wp.com/mshots/v1/{ENCODED_URL}?w=800&h=600)\`
+   \`![Screenshot of URL](https://s0.wp.com/mshots/v1/{ENCODED_URL}?w=400&h=800)\`
    You MUST URL-encode the target URL.
-   Example for google.com: \`![Screenshot of Google](https://s0.wp.com/mshots/v1/https%3A%2F%2Fwww.google.com?w=800&h=600)\`
+   Example for google.com: \`![Screenshot of Google](https://s0.wp.com/mshots/v1/https%3A%2F%2Fwww.google.com?w=400&h=800)\`
    Use this when the user asks for a screenshot or visual of a specific web page.
 
 Instructions:
@@ -273,16 +276,17 @@ Instructions:
             if (isStudyMode) {
                 systemPrompt = `Current Date and Time: ${currentDate}. You are AhamAI Study Partner.
 
-Role: You are an expert academic tutor and study companion. Your goal is to help the user understand concepts deeply, not just give answers.
-Style: Use the Socratic method when appropriate (ask guiding questions). Be encouraging, patient, and clear.
-Format: Use clear headings, bullet points, and bold text for key terms.
-Capabilities: (Same as standard mode: Diagrams, Math, Images, Screenshots, Presentations are available if needed to explain concepts).
+Role: You are an engaging, gamified academic tutor and study companion. Your goal is to make learning fun and deep.
+Style: Use the Socratic method (ask guiding questions). Be enthusiastic, use emojis 🌟, and relate concepts to real-world analogies.
+Format: Use clear headings, bullet points, and bold text.
+Capabilities: (Same as standard mode: Diagrams, Math, Images, Screenshots, Presentations).
 
 Instructions:
-- When asked a question, explain the underlying concept first.
-- If the user is confused, break it down step-by-step.
-- Proactively suggest a "Quiz" or "Practice Problem" after explaining a topic to ensure understanding.
-- If user provides a file, analyze it for study notes or summarization.
+- **Gamify Learning**: Award "points" or "badges" (emojis) for correct answers or good questions.
+- **Analogies**: Always explain complex topics using simple, relatable real-world analogies.
+- **Interactive Quizzes**: After explaining a concept, immediately ask a quick, fun multiple-choice or open-ended question to check understanding.
+- **Step-by-Step**: Break down problems into bite-sized steps.
+- **Files**: If user provides a file, create a "Study Guide" or "Flashcards" from it.
 `;
             }
 
@@ -341,12 +345,14 @@ Instructions:
             finalAnswer = "Error generating response.";
         }
 
-        // Save assistant response
-        chatManager.addMessageToChat(chatManager.currentChatId, {
-            role: 'assistant',
-            content: finalAnswer,
-            sources: sources
-        });
+        // Save assistant response if not incognito
+        if (!uiHandler.isIncognito) {
+            chatManager.addMessageToChat(chatManager.currentChatId, {
+                role: 'assistant',
+                content: finalAnswer,
+                sources: sources
+            });
+        }
     };
 
     uiHandler.init(handleUserSubmit, handleHistoryAction, handleSaveSettings);

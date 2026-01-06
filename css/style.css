@@ -18,6 +18,14 @@
     --sidebar-width: 260px;
 }
 
+.incognito-mode {
+    --bg-color: #333;
+    --sidebar-bg: #222;
+    --text-primary: #eee;
+    --input-bg: #444;
+    --border-color: #555;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -95,11 +103,6 @@ body {
 .logo-text {
     font-family: var(--font-family);
     letter-spacing: -0.02em;
-}
-
-.sanskrit {
-    font-family: var(--font-sanskrit);
-    font-weight: 700;
 }
 
 .logo-icon {
@@ -489,12 +492,39 @@ body {
 }
 
 .user-message {
-    font-size: 1.5rem; /* Larger font for user query like Perplexity */
-    font-weight: 500;
+    font-size: 1rem;
+    line-height: 1.6;
+    font-weight: 400;
     color: var(--text-primary);
     margin-bottom: 1rem;
     text-align: right;
     width: 100%;
+}
+
+.user-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    margin-top: 4px;
+}
+
+.user-message-container:hover .user-actions {
+    opacity: 1;
+}
+
+.user-action-btn {
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.user-action-btn:hover {
+    color: var(--accent-color);
 }
 
 .bot-message-container {
@@ -667,6 +697,18 @@ textarea {
 .attach-btn:hover {
     background: #f0f0f0;
     color: var(--text-primary);
+}
+
+.attach-btn.active-dot::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+    border: 1px solid var(--input-bg);
 }
 
 .attachment-chip {
@@ -875,6 +917,12 @@ textarea {
     font-size: 0.9rem;
     color: var(--text-primary);
     transition: background 0.1s;
+    gap: 8px; /* Ensure gap */
+}
+
+/* Fix attach file alignment - icon and text left aligned */
+#sheet-attach {
+    justify-content: flex-start;
 }
 
 .extension-item:hover {

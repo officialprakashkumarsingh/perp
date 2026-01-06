@@ -11,9 +11,11 @@ class UIHandler {
         this.newChatBtn = document.getElementById('new-chat-btn');
         this.settingsBtn = document.getElementById('settings-btn');
         this.settingsModal = document.getElementById('settings-modal');
+        this.incognitoBtn = document.getElementById('incognito-btn');
         this.fileInput = null;
         this.currentAttachment = null;
         this.onHistoryAction = null;
+        this.isIncognito = false;
 
         // Initialize Mermaid
         if (typeof mermaid !== 'undefined') {
@@ -35,6 +37,7 @@ class UIHandler {
         extBtn.type = 'button';
         extBtn.id = 'extension-btn';
         extBtn.className = 'attach-btn';
+        extBtn.style.position = 'relative'; // For pseudo element positioning
         extBtn.innerHTML = '🧩';
         extBtn.title = 'Extensions';
         leftControls.insertBefore(extBtn, leftControls.firstChild);
@@ -61,6 +64,14 @@ class UIHandler {
             this.fileInput.click();
             sheet.classList.remove('open');
         });
+
+        // Search Toggle logic moved to sheet
+        const searchSwitch = document.getElementById('search-switch');
+        searchSwitch.addEventListener('change', () => this.updateExtensionIconState());
+
+        // Study Toggle
+        const studySwitch = document.getElementById('study-switch');
+        studySwitch.addEventListener('change', () => this.updateExtensionIconState());
 
         // File selection
         this.fileInput.addEventListener('change', (e) => {
@@ -170,6 +181,22 @@ class UIHandler {
             });
         }
 
+        // Incognito Toggle
+        if (this.incognitoBtn) {
+            this.incognitoBtn.addEventListener('click', () => {
+                this.isIncognito = !this.isIncognito;
+                if (this.isIncognito) {
+                    document.body.classList.add('incognito-mode');
+                    this.incognitoBtn.style.opacity = '1';
+                    this.incognitoBtn.innerHTML = '🕵️';
+                } else {
+                    document.body.classList.remove('incognito-mode');
+                    this.incognitoBtn.style.opacity = '0.7';
+                    this.incognitoBtn.innerHTML = '🕶️';
+                }
+            });
+        }
+
         // Close sidebar when clicking outside on mobile
         document.addEventListener('click', (e) => {
             if (window.innerWidth <= 768) {
@@ -244,6 +271,8 @@ class UIHandler {
         chip.querySelector('.attachment-remove').addEventListener('click', () => {
             this.clearAttachment();
         });
+
+        this.updateExtensionIconState();
     }
 
     clearAttachment() {
@@ -251,16 +280,62 @@ class UIHandler {
         this.fileInput.value = '';
         const chip = document.getElementById('attachment-chip');
         if (chip) chip.remove();
+        this.updateExtensionIconState();
+    }
+
+    updateExtensionIconState() {
+        const extBtn = document.getElementById('extension-btn');
+        const isSearch = document.getElementById('search-switch').checked;
+        const isStudy = document.getElementById('study-switch').checked;
+        const hasFile = !!this.currentAttachment;
+
+        if (isSearch || isStudy || hasFile) {
+            extBtn.classList.add('active-dot');
+        } else {
+            extBtn.classList.remove('active-dot');
+        }
     }
 
     appendUserMessage(text) {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message';
-        msgDiv.innerHTML = `
-            <div class="user-message-container">
-                <div class="user-message">${this.escapeHtml(text)}</div>
-            </div>
-        `;
+
+        const container = document.createElement('div');
+        container.className = 'user-message-container';
+        container.style.flexDirection = 'column';
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'user-message';
+        textDiv.textContent = text;
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'user-actions';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'user-action-btn';
+        copyBtn.innerHTML = '📋';
+        copyBtn.title = 'Copy';
+        copyBtn.onclick = () => navigator.clipboard.writeText(text);
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'user-action-btn';
+        editBtn.innerHTML = '✏️';
+        editBtn.title = 'Edit';
+        editBtn.onclick = () => {
+            this.userInput.value = text;
+            this.userInput.focus();
+            // trigger auto resize
+            this.userInput.style.height = 'auto';
+            this.userInput.style.height = (this.userInput.scrollHeight) + 'px';
+        };
+
+        actionsDiv.appendChild(copyBtn);
+        actionsDiv.appendChild(editBtn);
+
+        container.appendChild(textDiv);
+        container.appendChild(actionsDiv);
+        msgDiv.appendChild(container);
+
         this.messagesList.appendChild(msgDiv);
         this.scrollToBottom();
     }
