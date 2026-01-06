@@ -274,6 +274,17 @@ class UIHandler {
         this.updateExtensionIconState();
     }
 
+    clearChat() {
+        this.messagesList.innerHTML = '';
+        this.welcomeScreen.style.display = 'flex';
+        this.currentAttachment = null;
+        this.fileInput.value = '';
+        const chip = document.getElementById('attachment-chip');
+        if (chip) chip.remove();
+        this.updateExtensionIconState();
+        if (this.welcomeTitle) this.welcomeTitle.textContent = this.isIncognito ? "You are in Incognito Mode" : "What do you want to know?";
+    }
+
     clearAttachment() {
         this.currentAttachment = null;
         this.fileInput.value = '';
@@ -835,7 +846,7 @@ class UIHandler {
             'download': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
             'pin': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M16 9V4l1 1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1l1-1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>', // Simplified pin
             'trash': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
-            'incognito': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8z" style="display:none;"/><path d="M5.5 13.5c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5c0 1.23-.66 2.31-1.63 2.92L12 18l1.13-1.58c-.97-.61-1.63-1.69-1.63-2.92 0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5c0 1.93-1.57 3.5-3.5 3.5-1.4 0-2.61-.84-3.18-2.04C11.23 16.16 10.02 17 8.62 17c-1.72 0-3.12-1.4-3.12-3.5z"/></svg>' // Glassesish
+            'incognito': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8 19.5L14.5 14c-1.5 1-3.5 1-5 0l-4.3 5.5"></path><path d="M5 6h14l-2.5 7h-9L5 6z"></path><path d="M2.5 19.5L5 6"></path><path d="M21.5 19.5L19 6"></path><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path></svg>'
         };
         return icons[name] || '';
     }

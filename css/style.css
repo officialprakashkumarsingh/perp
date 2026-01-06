@@ -690,7 +690,7 @@ body {
     left: 0;
     right: 0;
     padding: 1rem 1rem 2rem 1rem;
-    background: linear-gradient(transparent, var(--bg-color) 20%);
+    background-color: var(--bg-color);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1095,13 +1095,13 @@ input:checked + .slider:before {
     }
 
     .input-area-container {
-        padding: 0.5rem 0.5rem 1.5rem 0.5rem;
+        padding: 0.5rem;
         background: var(--bg-color); /* Solid background on mobile to prevent overlay issues */
         border-top: 1px solid var(--border-color);
     }
 
     .chat-container {
-        padding-bottom: 14rem; /* Extra padding for mobile input area */
+        padding-bottom: 10rem; /* Extra padding for mobile input area */
     }
 
     /* Ensure logo in mobile header also uses code font */
