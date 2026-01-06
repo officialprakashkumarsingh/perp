@@ -3,7 +3,6 @@ class UIHandler {
         this.messagesList = document.getElementById('messages-list');
         this.userInput = document.getElementById('user-input');
         this.modelSelect = document.getElementById('model-select');
-        this.searchToggle = document.getElementById('search-toggle');
         this.sendBtn = document.getElementById('send-btn');
         this.sidebar = document.getElementById('sidebar');
         this.sidebarToggle = document.getElementById('sidebar-toggle');
@@ -30,15 +29,38 @@ class UIHandler {
         this.fileInput.style.display = 'none';
         document.body.appendChild(this.fileInput);
 
-        // Attach Button Logic
+        // Extension Button Logic
         const leftControls = document.querySelector('.left-controls');
-        const attachBtn = document.createElement('button');
-        attachBtn.type = 'button';
-        attachBtn.className = 'attach-btn';
-        attachBtn.innerHTML = '+'; // Or a clip icon SVG
-        attachBtn.title = 'Attach File';
-        attachBtn.addEventListener('click', () => this.fileInput.click());
-        leftControls.insertBefore(attachBtn, leftControls.firstChild);
+        const extBtn = document.createElement('button');
+        extBtn.type = 'button';
+        extBtn.id = 'extension-btn';
+        extBtn.className = 'attach-btn';
+        extBtn.innerHTML = '🧩';
+        extBtn.title = 'Extensions';
+        leftControls.insertBefore(extBtn, leftControls.firstChild);
+
+        const sheet = document.getElementById('extension-sheet');
+
+        // Toggle Sheet
+        extBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sheet.classList.toggle('open');
+        });
+
+        // Close sheet on click outside
+        document.addEventListener('click', (e) => {
+            if (!sheet.contains(e.target) && e.target !== extBtn) {
+                sheet.classList.remove('open');
+            }
+        });
+
+        // Extension Items Logic
+
+        // Attach
+        document.getElementById('sheet-attach').addEventListener('click', () => {
+            this.fileInput.click();
+            sheet.classList.remove('open');
+        });
 
         // File selection
         this.fileInput.addEventListener('change', (e) => {
@@ -46,6 +68,7 @@ class UIHandler {
                 this.handleFileSelect(this.fileInput.files[0]);
             }
         });
+
         // Auto-resize textarea
         this.userInput.addEventListener('input', () => {
             this.userInput.style.height = 'auto';
@@ -88,12 +111,6 @@ class UIHandler {
             this.modelSelect.appendChild(option);
         });
 
-        // Search Toggle
-        this.searchToggle.addEventListener('click', () => {
-            const isPressed = this.searchToggle.getAttribute('aria-pressed') === 'true';
-            this.searchToggle.setAttribute('aria-pressed', !isPressed);
-        });
-
         // Sidebar Toggle (Mobile)
         if (this.sidebarToggle) {
             this.sidebarToggle.addEventListener('click', () => {
@@ -114,8 +131,6 @@ class UIHandler {
                 this.settingsModal.classList.add('open');
                 const savedInstructions = localStorage.getItem('ahamai_custom_instructions') || '';
                 document.getElementById('custom-instructions').value = savedInstructions;
-                // Render Integrations (refresh state)
-                this.renderIntegrations();
             });
 
             this.settingsModal.querySelector('.close-modal').addEventListener('click', () => {
@@ -173,7 +188,8 @@ class UIHandler {
         if (!text && !this.currentAttachment) return;
 
         const model = this.modelSelect.value;
-        const isSearchEnabled = this.searchToggle.getAttribute('aria-pressed') === 'true';
+        const isSearchEnabled = document.getElementById('search-switch').checked;
+        const isStudyMode = document.getElementById('study-switch').checked;
         const attachment = this.currentAttachment;
 
         this.userInput.value = '';
@@ -186,7 +202,7 @@ class UIHandler {
         // Hide welcome screen
         this.welcomeScreen.style.display = 'none';
 
-        onSubmit(text, model, isSearchEnabled, attachment);
+        onSubmit(text, model, isSearchEnabled, isStudyMode, attachment);
     }
 
     setStopMode(isStop) {
@@ -738,43 +754,5 @@ class UIHandler {
     clearChat() {
         this.messagesList.innerHTML = '';
         this.welcomeScreen.style.display = 'flex';
-    }
-
-    renderIntegrations() {
-        const grid = document.getElementById('integrations-grid');
-        if (!grid) return;
-        grid.innerHTML = '';
-
-        const integrations = [
-            { id: 'wikipedia', name: 'Wikipedia', icon: '📚' },
-            { id: 'duckduckgo', name: 'DuckDuckGo', icon: '🦆' },
-            { id: 'weather', name: 'Weather', icon: '🌦️' },
-            { id: 'hackernews', name: 'HackerNews', icon: '📰' }
-        ];
-
-        // Load state
-        const enabled = JSON.parse(localStorage.getItem('ahamai_integrations') || '{}');
-
-        integrations.forEach(integration => {
-            const card = document.createElement('div');
-            card.className = `integration-card ${enabled[integration.id] ? 'active' : ''}`;
-            card.innerHTML = `
-                <div class="integration-toggle"></div>
-                <div class="integration-icon">${integration.icon}</div>
-                <div class="integration-name">${integration.name}</div>
-            `;
-
-            card.addEventListener('click', () => {
-                const newState = !enabled[integration.id];
-                enabled[integration.id] = newState;
-                localStorage.setItem('ahamai_integrations', JSON.stringify(enabled));
-
-                // Toggle UI
-                if (newState) card.classList.add('active');
-                else card.classList.remove('active');
-            });
-
-            grid.appendChild(card);
-        });
     }
 }

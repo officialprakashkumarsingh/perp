@@ -64,15 +64,33 @@
                         </div>
                         <div class="input-bottom-row">
                             <div class="left-controls">
-                                <button type="button" id="search-toggle" class="toggle-btn" aria-pressed="false" title="Toggle Web Search">
-                                    <span class="toggle-icon">🌐</span> <span class="toggle-text">Search</span>
-                                </button>
                                 <select id="model-select" class="model-select" aria-label="Select Model"></select>
                             </div>
                             <div class="right-controls">
                                 <button type="submit" id="send-btn" aria-label="Send" disabled>
                                     <span class="arrow-icon">→</span>
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- Extension Sheet -->
+                        <div id="extension-sheet" class="extension-sheet">
+                            <div class="extension-item" id="sheet-attach">
+                                <span class="ext-icon">📎</span> Attach File
+                            </div>
+                            <div class="extension-item" id="sheet-search">
+                                <span class="ext-icon">🌐</span> Web Search
+                                <label class="switch">
+                                    <input type="checkbox" id="search-switch">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="extension-item" id="sheet-study">
+                                <span class="ext-icon">🎓</span> Study Together
+                                <label class="switch">
+                                    <input type="checkbox" id="study-switch">
+                                    <span class="slider round"></span>
+                                </label>
                             </div>
                         </div>
                     </form>
@@ -109,11 +127,6 @@
                 <label for="custom-instructions">Custom Instructions</label>
                 <textarea id="custom-instructions" rows="5" placeholder="Enter custom instructions for the AI (e.g., 'Be concise', 'Explain like I'm 5')..."></textarea>
                 <p class="helper-text">The AI will follow these instructions in every new chat.</p>
-
-                <h3>Integrations</h3>
-                <div id="integrations-grid" class="integrations-grid">
-                    <!-- Integrations injected by JS -->
-                </div>
 
                 <h3>Data Control</h3>
                 <div class="data-controls">

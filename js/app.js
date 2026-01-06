@@ -54,11 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const chat = this.getChat(id);
             if (chat) {
                 chat.messages.push(message);
-                // Update title if it's the first user message
-                if (chat.messages.length === 2 && message.role === 'user') { // System msg is 0? No, usually not stored.
-                     // Actually let's just use the first user message as title
-                }
-                // If it's the first user message (length 1 or 2 depending on if we store system), set title
                 const userMsgs = chat.messages.filter(m => m.role === 'user');
                 if (userMsgs.length === 1 && message.role === 'user') {
                     chat.title = message.content.substring(0, 30) + (message.content.length > 30 ? '...' : '');
@@ -92,9 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Replay messages
                 chat.messages.forEach(msg => {
                     if (msg.role === 'user') {
-                        // Strip attachment text for display if possible, or just show full
-                        // Since we append attachment text to content, we might show it.
-                        // Ideally we'd store display text separately, but for now simple replay:
                         uiHandler.appendUserMessage(msg.content);
                     } else if (msg.role === 'assistant') {
                         const { messageDiv, sourcesDiv, contentDiv } = uiHandler.createBotMessageContainer();
@@ -130,11 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleSaveSettings = (instructions) => {
         localStorage.setItem('ahamai_custom_instructions', instructions);
-        // Optionally notify user
-        // uiHandler.showToast('Settings saved');
     };
 
-    const handleUserSubmit = async (query, model, isSearchEnabled, attachment) => {
+    const handleUserSubmit = async (query, model, isSearchEnabled, isStudyMode, attachment) => {
         // Ensure we have a chat session
         if (!chatManager.currentChatId) {
             const newChat = chatManager.createChat();
@@ -164,13 +154,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Handle URL Reading
-        // Check for URLs in query
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         const urls = query.match(urlRegex);
         let urlContext = "";
 
         if (urls && urls.length > 0) {
-            uiHandler.showToast?.('Reading URLs...');
             for (const url of urls) {
                 try {
                     const content = await apiHandler.fetchPageContent(url);
@@ -183,24 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Handle Integrations
-        const integrations = JSON.parse(localStorage.getItem('ahamai_integrations') || '{}');
-        let integrationContext = "";
-
-        if (integrations.wikipedia) {
-            integrationContext += await apiHandler.fetchWikipedia(query);
-        }
-        if (integrations.duckduckgo) {
-            integrationContext += await apiHandler.fetchDuckDuckGo(query);
-        }
-        if (integrations.weather) {
-            integrationContext += await apiHandler.fetchWeather(query);
-        }
-        if (integrations.hackernews) {
-            integrationContext += await apiHandler.fetchHackerNews(query);
-        }
-
-        const fullUserContent = query + attachmentText + urlContext + integrationContext;
+        const fullUserContent = query + attachmentText + urlContext;
 
         chatManager.addMessageToChat(chatManager.currentChatId, { role: 'user', content: fullUserContent });
 
@@ -229,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // 1. Search Web (if enabled)
             let searchContext = "";
-            if (isSearchEnabled && query.trim().length > 0) { // Only search if there is a query
+            if (isSearchEnabled && query.trim().length > 0) {
                 try {
                     const searchResults = await apiHandler.searchWeb(query);
                     sources = searchResults;
@@ -284,12 +255,37 @@ Capabilities:
    <div class="slide" style="...">...</div>
    \`\`\`
 
+6. **Screenshots**: You can show screenshots of websites.
+   To display a screenshot, output a Markdown image using the WordPress mShots API:
+   \`![Screenshot of URL](https://s0.wp.com/mshots/v1/{ENCODED_URL}?w=800&h=600)\`
+   You MUST URL-encode the target URL.
+   Example for google.com: \`![Screenshot of Google](https://s0.wp.com/mshots/v1/https%3A%2F%2Fwww.google.com?w=800&h=600)\`
+   Use this when the user asks for a screenshot or visual of a specific web page.
+
 Instructions:
 - If the user asks to "draw" or "visualize" a system, process, or chart, ALWAYS provide a Mermaid diagram.
 - If the user asks to "generate an image" or "show a picture", use the Pollinations AI markdown format.
 - If the user asks for a "presentation" or "slides", generate the HTML slide format described above.
 - Be concise and helpful.
 `;
+
+            // Study Together Mode Logic
+            if (isStudyMode) {
+                systemPrompt = `Current Date and Time: ${currentDate}. You are AhamAI Study Partner.
+
+Role: You are an expert academic tutor and study companion. Your goal is to help the user understand concepts deeply, not just give answers.
+Style: Use the Socratic method when appropriate (ask guiding questions). Be encouraging, patient, and clear.
+Format: Use clear headings, bullet points, and bold text for key terms.
+Capabilities: (Same as standard mode: Diagrams, Math, Images, Screenshots, Presentations are available if needed to explain concepts).
+
+Instructions:
+- When asked a question, explain the underlying concept first.
+- If the user is confused, break it down step-by-step.
+- Proactively suggest a "Quiz" or "Practice Problem" after explaining a topic to ensure understanding.
+- If user provides a file, analyze it for study notes or summarization.
+`;
+            }
+
             // Add Custom Instructions
             const customInstructions = localStorage.getItem('ahamai_custom_instructions');
             if (customInstructions && customInstructions.trim()) {
@@ -299,19 +295,15 @@ Instructions:
             if (searchContext) {
                 systemPrompt += searchContext;
             } else {
-                systemPrompt += " Answer the user's question to the best of your ability.";
+                if (!isStudyMode) systemPrompt += " Answer the user's question to the best of your ability.";
             }
 
-            // Build message history for context (limit to last few turns to save tokens if needed)
+            // Build message history for context
             const chat = chatManager.getChat(chatManager.currentChatId);
             const historyMessages = chat.messages.map(m => ({
                 role: m.role,
                 content: m.content
             })).slice(-10); // Last 10 messages
-
-            // Remove the last user message we just added locally from historyMessages because we want to construct the prompt freshly?
-            // actually historyMessages includes the one we just pushed.
-            // But we need to insert system prompt at start.
 
             const messages = [
                 { role: "system", content: systemPrompt },
@@ -334,7 +326,7 @@ Instructions:
             // Show Actions (Copy, Regenerate, Export)
             uiHandler.addMessageActions(actionsDiv, contentDiv, () => {
                 // Regenerate logic: Call submit with same query
-                handleUserSubmit(query, model, isSearchEnabled, attachment);
+                handleUserSubmit(query, model, isSearchEnabled, isStudyMode, attachment);
             });
 
         } catch (error) {
