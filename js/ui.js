@@ -114,6 +114,8 @@ class UIHandler {
                 this.settingsModal.classList.add('open');
                 const savedInstructions = localStorage.getItem('ahamai_custom_instructions') || '';
                 document.getElementById('custom-instructions').value = savedInstructions;
+                // Render Integrations (refresh state)
+                this.renderIntegrations();
             });
 
             this.settingsModal.querySelector('.close-modal').addEventListener('click', () => {
@@ -124,18 +126,6 @@ class UIHandler {
                 const instructions = document.getElementById('custom-instructions').value;
                 if (onSaveSettings) onSaveSettings(instructions);
                 this.settingsModal.classList.remove('open');
-            });
-
-            // Theme Toggle
-            const themeToggle = document.getElementById('theme-toggle');
-            themeToggle.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    document.body.classList.add('amoled-theme');
-                    localStorage.setItem('ahamai_theme', 'amoled');
-                } else {
-                    document.body.classList.remove('amoled-theme');
-                    localStorage.setItem('ahamai_theme', 'light');
-                }
             });
 
             // Data Controls
@@ -203,7 +193,11 @@ class UIHandler {
         this.sendBtn.disabled = false; // Always enabled to allow interaction
         if (isStop) {
             this.sendBtn.classList.add('stop-btn');
-            this.sendBtn.innerHTML = '<span class="stop-icon">🟥</span>';
+            this.sendBtn.innerHTML = `
+                <svg class="stop-icon-svg" viewBox="0 0 24 24">
+                    <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
+                </svg>
+            `;
             this.sendBtn.title = "Stop Generating";
         } else {
             this.sendBtn.classList.remove('stop-btn');
@@ -744,5 +738,43 @@ class UIHandler {
     clearChat() {
         this.messagesList.innerHTML = '';
         this.welcomeScreen.style.display = 'flex';
+    }
+
+    renderIntegrations() {
+        const grid = document.getElementById('integrations-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const integrations = [
+            { id: 'wikipedia', name: 'Wikipedia', icon: '📚' },
+            { id: 'duckduckgo', name: 'DuckDuckGo', icon: '🦆' },
+            { id: 'weather', name: 'Weather', icon: '🌦️' },
+            { id: 'hackernews', name: 'HackerNews', icon: '📰' }
+        ];
+
+        // Load state
+        const enabled = JSON.parse(localStorage.getItem('ahamai_integrations') || '{}');
+
+        integrations.forEach(integration => {
+            const card = document.createElement('div');
+            card.className = `integration-card ${enabled[integration.id] ? 'active' : ''}`;
+            card.innerHTML = `
+                <div class="integration-toggle"></div>
+                <div class="integration-icon">${integration.icon}</div>
+                <div class="integration-name">${integration.name}</div>
+            `;
+
+            card.addEventListener('click', () => {
+                const newState = !enabled[integration.id];
+                enabled[integration.id] = newState;
+                localStorage.setItem('ahamai_integrations', JSON.stringify(enabled));
+
+                // Toggle UI
+                if (newState) card.classList.add('active');
+                else card.classList.remove('active');
+            });
+
+            grid.appendChild(card);
+        });
     }
 }

@@ -183,7 +183,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const fullUserContent = query + attachmentText + urlContext;
+        // Handle Integrations
+        const integrations = JSON.parse(localStorage.getItem('ahamai_integrations') || '{}');
+        let integrationContext = "";
+
+        if (integrations.wikipedia) {
+            integrationContext += await apiHandler.fetchWikipedia(query);
+        }
+        if (integrations.duckduckgo) {
+            integrationContext += await apiHandler.fetchDuckDuckGo(query);
+        }
+        if (integrations.weather) {
+            integrationContext += await apiHandler.fetchWeather(query);
+        }
+        if (integrations.hackernews) {
+            integrationContext += await apiHandler.fetchHackerNews(query);
+        }
+
+        const fullUserContent = query + attachmentText + urlContext + integrationContext;
 
         chatManager.addMessageToChat(chatManager.currentChatId, { role: 'user', content: fullUserContent });
 

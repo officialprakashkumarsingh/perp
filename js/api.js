@@ -162,4 +162,80 @@ class APIHandler {
             return null;
         }
     }
+
+    async fetchWikipedia(query) {
+        try {
+            const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Wikipedia API error');
+            const data = await response.json();
+            return `\n\n--- Wikipedia Summary (${data.title}) ---\n${data.extract}\nURL: ${data.content_urls.desktop.page}\n`;
+        } catch (e) {
+            console.error("Wikipedia fetch error", e);
+            return "";
+        }
+    }
+
+    async fetchDuckDuckGo(query) {
+        try {
+            // DuckDuckGo Instant Answer API
+            const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error('DDG API error');
+            const data = await response.json();
+            const json = JSON.parse(data.contents);
+
+            if (json.AbstractText) {
+                return `\n\n--- DuckDuckGo Instant Answer ---\n${json.AbstractText}\nSource: ${json.AbstractURL}\n`;
+            }
+            return "";
+        } catch (e) {
+            console.error("DuckDuckGo fetch error", e);
+            return "";
+        }
+    }
+
+    async fetchWeather(query) {
+        try {
+            // 1. Geocoding
+            const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`;
+            const geoResponse = await fetch(geoUrl);
+            const geoData = await geoResponse.json();
+
+            if (!geoData.results || geoData.results.length === 0) return "";
+
+            const { latitude, longitude, name, country } = geoData.results[0];
+
+            // 2. Weather
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
+            const weatherResponse = await fetch(weatherUrl);
+            const weatherData = await weatherResponse.json();
+
+            const current = weatherData.current;
+            return `\n\n--- Weather for ${name}, ${country} ---\nTemp: ${current.temperature_2m}${weatherData.current_units.temperature_2m}\nWind: ${current.wind_speed_10m}${weatherData.current_units.wind_speed_10m}\n`;
+        } catch (e) {
+            console.error("Weather fetch error", e);
+            return "";
+        }
+    }
+
+    async fetchHackerNews(query) {
+        try {
+            const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.hits.length === 0) return "";
+
+            let result = `\n\n--- Hacker News Results for "${query}" ---\n`;
+            data.hits.forEach(hit => {
+                result += `- ${hit.title} (Points: ${hit.points})\n  URL: ${hit.url}\n`;
+            });
+            return result + "\n";
+        } catch (e) {
+            console.error("HN fetch error", e);
+            return "";
+        }
+    }
 }
