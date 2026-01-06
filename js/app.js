@@ -138,15 +138,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         uiHandler.appendUserMessage(displayMessage);
 
-        // Handle PDF Text Extraction
+        // Handle File Text Extraction
         let attachmentText = "";
         if (attachment) {
             try {
-                if (typeof extractTextFromPDF !== 'undefined') {
-                    const text = await extractTextFromPDF(attachment);
+                if (typeof extractTextFromFile !== 'undefined') {
+                    const text = await extractTextFromFile(attachment);
                     attachmentText = `\n\n--- Attachment Content (${attachment.name}) ---\n${text}\n--- End Attachment ---\n`;
                 } else {
-                    attachmentText = `\n\n[System: Failed to load PDF extraction library.]`;
+                    attachmentText = `\n\n[System: Failed to load file extraction library.]`;
                 }
             } catch (e) {
                 attachmentText = `\n\n[System: Failed to read attachment: ${e.message}]`;
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chatManager.addMessageToChat(chatManager.currentChatId, { role: 'user', content: fullUserContent });
 
-        const { messageDiv, sourcesDiv, contentDiv } = uiHandler.createBotMessageContainer();
+        const { messageDiv, sourcesDiv, contentDiv, actionsDiv } = uiHandler.createBotMessageContainer();
         const loadingDiv = uiHandler.showLoading(contentDiv);
 
         let finalAnswer = "";
@@ -199,10 +199,18 @@ Capabilities:
 2. **Math & Science**: You can render mathematical and chemical formulas using LaTeX. Use standard LaTeX delimiters: $ for inline math and $$ for display math.
    Example: The area is $A = \pi r^2$.
 
-3. **Attachments**: The user may provide text from attached PDF files. Use this context to answer questions.
+3. **Attachments**: The user may provide text from attached files (PDF, code, text, zip). Use this context to answer questions.
+
+4. **Image Generation**: You can generate images using Pollinations AI.
+   To generate an image, you MUST use this exact Markdown format:
+   \`![Image Description](https://image.pollinations.ai/prompt/{description}?nologo=true)\`
+   Replace \`{description}\` with a URL-encoded detailed prompt for the image.
+   Example: \`![A futuristic city](https://image.pollinations.ai/prompt/futuristic%20city%20sunset?nologo=true)\`
+   Do NOT use any other API or format. Generate images when the user explicitly asks or when it adds significant value.
 
 Instructions:
-- If the user asks to "draw" or "visualize" something, ALWAYS provide a Mermaid diagram if possible.
+- If the user asks to "draw" or "visualize" a system, process, or chart, ALWAYS provide a Mermaid diagram.
+- If the user asks to "generate an image" or "show a picture", use the Pollinations AI markdown format.
 - Be concise and helpful.
 `;
             // Add Custom Instructions
@@ -244,6 +252,12 @@ Instructions:
             });
 
             finalAnswer = fullResponse;
+
+            // Show Actions (Copy, Regenerate, Export)
+            uiHandler.addMessageActions(actionsDiv, contentDiv, () => {
+                // Regenerate logic: Call submit with same query
+                handleUserSubmit(query, model, isSearchEnabled, attachment);
+            });
 
         } catch (error) {
             uiHandler.removeLoading(loadingDiv);

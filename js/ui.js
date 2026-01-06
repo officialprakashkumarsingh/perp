@@ -26,7 +26,7 @@ class UIHandler {
         // Create file input hidden
         this.fileInput = document.createElement('input');
         this.fileInput.type = 'file';
-        this.fileInput.accept = '.pdf';
+        this.fileInput.accept = '.pdf,.txt,.zip,.js,.py,.html,.css,.json,.md';
         this.fileInput.style.display = 'none';
         document.body.appendChild(this.fileInput);
 
@@ -36,7 +36,7 @@ class UIHandler {
         attachBtn.type = 'button';
         attachBtn.className = 'attach-btn';
         attachBtn.innerHTML = '+'; // Or a clip icon SVG
-        attachBtn.title = 'Attach PDF';
+        attachBtn.title = 'Attach File';
         attachBtn.addEventListener('click', () => this.fileInput.click());
         leftControls.insertBefore(attachBtn, leftControls.firstChild);
 
@@ -200,7 +200,7 @@ class UIHandler {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message';
 
-        // Structure: Sources (optional) + Content
+        // Structure: Sources (optional) + Content + Actions
         const sourcesDiv = document.createElement('div');
         sourcesDiv.className = 'sources-section';
         sourcesDiv.style.display = 'none'; // Hidden initially
@@ -211,14 +211,69 @@ class UIHandler {
         const textDiv = document.createElement('div');
         textDiv.className = 'bot-message-content';
 
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'message-actions';
+        actionsDiv.style.display = 'none'; // Hidden until complete
+
         contentDiv.appendChild(textDiv);
         msgDiv.appendChild(sourcesDiv);
         msgDiv.appendChild(contentDiv);
+        msgDiv.appendChild(actionsDiv);
 
         this.messagesList.appendChild(msgDiv);
         this.scrollToBottom();
 
-        return { messageDiv: msgDiv, sourcesDiv, contentDiv: textDiv };
+        return { messageDiv: msgDiv, sourcesDiv, contentDiv: textDiv, actionsDiv };
+    }
+
+    addMessageActions(actionsDiv, contentDiv, onRegenerate) {
+        actionsDiv.style.display = 'flex';
+        actionsDiv.innerHTML = ''; // Clear previous
+
+        // Copy Button
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'action-btn';
+        copyBtn.innerHTML = '📋 Copy';
+        copyBtn.onclick = () => {
+            const text = contentDiv.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.innerHTML = '✅ Copied';
+                setTimeout(() => copyBtn.innerHTML = '📋 Copy', 2000);
+            });
+        };
+
+        // Regenerate Button
+        const regenBtn = document.createElement('button');
+        regenBtn.className = 'action-btn';
+        regenBtn.innerHTML = '🔄 Regenerate';
+        regenBtn.onclick = onRegenerate;
+
+        // Export PDF Button
+        const pdfBtn = document.createElement('button');
+        pdfBtn.className = 'action-btn';
+        pdfBtn.innerHTML = '📄 Export PDF';
+        pdfBtn.onclick = () => this.exportMessageToPDF(contentDiv);
+
+        actionsDiv.appendChild(copyBtn);
+        actionsDiv.appendChild(regenBtn);
+        actionsDiv.appendChild(pdfBtn);
+
+        this.scrollToBottom();
+    }
+
+    exportMessageToPDF(element) {
+        if (typeof html2pdf === 'undefined') return;
+
+        const opt = {
+            margin: 1,
+            filename: `ahamai-response-${Date.now()}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        html2pdf().set(opt).from(element).save();
     }
 
     renderSources(container, sources) {
@@ -294,19 +349,37 @@ class UIHandler {
              });
 
              // Run mermaid
+             // Ensure the selector targets the specific container to avoid re-rendering existing diagrams incorrectly
+             // But mermaid.run with querySelector targets all matching elements.
+             // We can use a specific ID if we want, but let's try just targeting .mermaid inside container
+             // However, querySelector in run takes a global selector string.
+
+             // The issue might be that mermaid.run is async and we need to wait for it.
+             // Also, if we call it multiple times, it might be tricky.
+             // Let's try to target specific nodes.
+
+             // Workaround: We already replaced pre with div.mermaid.
+             // We can pass the nodes directly if supported, or just use class selector.
+
              mermaid.run({
-                querySelector: '.mermaid'
+                nodes: container.querySelectorAll('.mermaid')
              }).then(() => {
                  // Add export buttons to generated diagrams
                  const processedBlocks = container.querySelectorAll('.mermaid');
                  processedBlocks.forEach(block => {
+                     // Check if SVG exists (rendered)
+                     if (!block.querySelector('svg')) return;
+
                      // Check if already has button
                      if (block.parentElement.classList.contains('diagram-container')) return;
 
                      // Wrap in container
                      const wrapper = document.createElement('div');
                      wrapper.className = 'diagram-container';
+
+                     // Insert wrapper before block
                      block.parentNode.insertBefore(wrapper, block);
+                     // Move block into wrapper
                      wrapper.appendChild(block);
 
                      // Add button
