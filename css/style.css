@@ -14,17 +14,31 @@
     --font-mono: 'Söhne Mono', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
     --font-sanskrit: 'Noto Sans Devanagari', 'Mangal', 'Arial Unicode MS', sans-serif;
 
-    --logo-font: var(--font-family);
+    --logo-font: 'Poppins', sans-serif;
     --sidebar-width: 260px;
 }
 
-.incognito-mode {
-    --bg-color: #333;
-    --sidebar-bg: #222;
-    --text-primary: #eee;
-    --input-bg: #444;
-    --border-color: #555;
+@font-face {
+    font-family: 'Poppins';
+    src: url('fonts/Poppins-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
 }
+@font-face {
+    font-family: 'Poppins';
+    src: url('fonts/Poppins-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Poppins';
+    src: url('fonts/Poppins-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+}
+
+/* Incognito Mode - No Theme Change, just logic */
+/* .incognito-mode {} Removed */
 
 * {
     box-sizing: border-box;
@@ -97,12 +111,11 @@ body {
     gap: 0.5rem;
     color: var(--text-primary);
     margin-bottom: 1.5rem;
-    letter-spacing: -0.02em;
+    letter-spacing: 0px;
 }
 
 .logo-text {
-    font-family: var(--font-family);
-    letter-spacing: -0.02em;
+    font-family: var(--logo-font);
 }
 
 .logo-icon {
@@ -159,13 +172,19 @@ body {
     cursor: pointer;
     font-size: 0.9rem;
     color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    group: relative;
+    position: relative;
+}
+
+.history-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0; /* Crucial for text-overflow in flex */
+    margin-right: 4px;
 }
 
 .history-item:hover, .history-item.active {
@@ -179,7 +198,8 @@ body {
 
 .history-actions {
     display: none; /* Show on hover */
-    gap: 4px;
+    gap: 2px;
+    background: var(--sidebar-bg); /* Cover text if needed, but flex handles overlap */
 }
 
 .history-item:hover .history-actions,
@@ -191,13 +211,23 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 0.8rem;
     color: var(--text-secondary);
-    padding: 2px;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .history-action-btn:hover {
     color: var(--text-primary);
+    background-color: rgba(0,0,0,0.05);
+}
+
+.icon-svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
 }
 
 /* Main Content */
@@ -464,11 +494,50 @@ body {
 
 .welcome-screen h1 {
     font-size: 2.5rem;
-    font-weight: 400; /* Lighter weight like Perplexity */
+    font-weight: 400;
     color: #333;
-    font-family: "Georgia", serif; /* Or similar serif for the heading if desired, sticking to sans for now based on css var */
     font-family: var(--font-family);
     letter-spacing: -0.02em;
+    margin-bottom: 2rem;
+}
+
+.suggestion-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    max-width: 600px;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.suggestion-card {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.suggestion-card:hover {
+    background: #f9f9f9;
+    border-color: var(--accent-color);
+}
+
+.suggestion-title {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+@media (max-width: 600px) {
+    .suggestion-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .messages-list {

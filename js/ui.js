@@ -12,6 +12,7 @@ class UIHandler {
         this.settingsBtn = document.getElementById('settings-btn');
         this.settingsModal = document.getElementById('settings-modal');
         this.incognitoBtn = document.getElementById('incognito-btn');
+        this.welcomeTitle = document.getElementById('welcome-title');
         this.fileInput = null;
         this.currentAttachment = null;
         this.onHistoryAction = null;
@@ -92,11 +93,6 @@ class UIHandler {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 // Check if it's send or stop mode
-                // Actually button disabled state handles "Send" logic blocking
-                // But "Stop" logic is triggered by click.
-                // If user presses enter while streaming, maybe stop?
-                // Standard behavior is usually do nothing or stop.
-                // We'll stick to button click for Stop to avoid accidental Enter stops.
                 if (!this.sendBtn.disabled && !this.sendBtn.classList.contains('stop-btn')) {
                     this.submitForm(onSubmit);
                 }
@@ -183,16 +179,16 @@ class UIHandler {
 
         // Incognito Toggle
         if (this.incognitoBtn) {
+            this.incognitoBtn.innerHTML = this.getIcon('incognito');
             this.incognitoBtn.addEventListener('click', () => {
                 this.isIncognito = !this.isIncognito;
                 if (this.isIncognito) {
-                    document.body.classList.add('incognito-mode');
+                    // No theme change, just text and logic
                     this.incognitoBtn.style.opacity = '1';
-                    this.incognitoBtn.innerHTML = '🕵️';
+                    if (this.welcomeTitle) this.welcomeTitle.textContent = "You are in Incognito Mode";
                 } else {
-                    document.body.classList.remove('incognito-mode');
                     this.incognitoBtn.style.opacity = '0.7';
-                    this.incognitoBtn.innerHTML = '🕶️';
+                    if (this.welcomeTitle) this.welcomeTitle.textContent = "What do you want to know?";
                 }
             });
         }
@@ -208,6 +204,9 @@ class UIHandler {
 
         // Setup History Actions callbacks
         this.onHistoryAction = onHistoryAction;
+
+        // Render Suggestions
+        this.renderSuggestions(onSubmit);
     }
 
     submitForm(onSubmit) {
@@ -313,18 +312,17 @@ class UIHandler {
 
         const copyBtn = document.createElement('button');
         copyBtn.className = 'user-action-btn';
-        copyBtn.innerHTML = '📋';
+        copyBtn.innerHTML = this.getIcon('copy');
         copyBtn.title = 'Copy';
         copyBtn.onclick = () => navigator.clipboard.writeText(text);
 
         const editBtn = document.createElement('button');
         editBtn.className = 'user-action-btn';
-        editBtn.innerHTML = '✏️';
+        editBtn.innerHTML = this.getIcon('edit');
         editBtn.title = 'Edit';
         editBtn.onclick = () => {
             this.userInput.value = text;
             this.userInput.focus();
-            // trigger auto resize
             this.userInput.style.height = 'auto';
             this.userInput.style.height = (this.userInput.scrollHeight) + 'px';
         };
@@ -377,25 +375,25 @@ class UIHandler {
         // Copy Button
         const copyBtn = document.createElement('button');
         copyBtn.className = 'action-btn';
-        copyBtn.innerHTML = '📋 Copy';
+        copyBtn.innerHTML = this.getIcon('copy') + ' Copy';
         copyBtn.onclick = () => {
             const text = contentDiv.innerText;
             navigator.clipboard.writeText(text).then(() => {
                 copyBtn.innerHTML = '✅ Copied';
-                setTimeout(() => copyBtn.innerHTML = '📋 Copy', 2000);
+                setTimeout(() => copyBtn.innerHTML = this.getIcon('copy') + ' Copy', 2000);
             });
         };
 
         // Regenerate Button
         const regenBtn = document.createElement('button');
         regenBtn.className = 'action-btn';
-        regenBtn.innerHTML = '🔄 Regenerate';
+        regenBtn.innerHTML = this.getIcon('refresh') + ' Regenerate';
         regenBtn.onclick = onRegenerate;
 
         // Export PDF Button
         const pdfBtn = document.createElement('button');
         pdfBtn.className = 'action-btn';
-        pdfBtn.innerHTML = '📄 Export PDF';
+        pdfBtn.innerHTML = this.getIcon('download') + ' Export PDF';
         pdfBtn.onclick = () => this.exportMessageToPDF(contentDiv);
 
         actionsDiv.appendChild(copyBtn);
@@ -527,18 +525,6 @@ class UIHandler {
              });
 
              // Run mermaid
-             // Ensure the selector targets the specific container to avoid re-rendering existing diagrams incorrectly
-             // But mermaid.run with querySelector targets all matching elements.
-             // We can use a specific ID if we want, but let's try just targeting .mermaid inside container
-             // However, querySelector in run takes a global selector string.
-
-             // The issue might be that mermaid.run is async and we need to wait for it.
-             // Also, if we call it multiple times, it might be tricky.
-             // Let's try to target specific nodes.
-
-             // Workaround: We already replaced pre with div.mermaid.
-             // We can pass the nodes directly if supported, or just use class selector.
-
              mermaid.run({
                 nodes: container.querySelectorAll('.mermaid')
              }).then(() => {
@@ -583,14 +569,6 @@ class UIHandler {
         const svg = block.querySelector('svg');
         if (!svg) return;
 
-        // Simplify export: Convert SVG directly to Data URL if possible, or use simpler canvas approach
-        // The issue with previous approach might be styles not being inline.
-        // Let's try to clone the node and ensure styles are computed?
-        // Or simpler: Just download the SVG itself if PNG is tricky without external libs like canvg.
-        // But user asked for image export. Canvas "tainted" is common issue if using external fonts/images.
-        // Since we have no external images in mermaid usually, it should be fine.
-        // Let's try explicitly setting width/height on SVG to avoid 0 size issues.
-
         const svgData = new XMLSerializer().serializeToString(svg);
         const svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
         const svgUrl = URL.createObjectURL(svgBlob);
@@ -598,21 +576,19 @@ class UIHandler {
         const img = new Image();
         img.onload = () => {
             const canvas = document.createElement("canvas");
-            // Use actual SVG viewbox or width/height if set
             const bbox = svg.getBBox();
-            // Fallback to bounding client rect if getBBox is zero (happens if not in DOM or hidden)
             const width = bbox.width || svg.getBoundingClientRect().width;
             const height = bbox.height || svg.getBoundingClientRect().height;
 
             const scale = 2;
-            canvas.width = width * scale + 20; // Add padding
+            canvas.width = width * scale + 20;
             canvas.height = height * scale + 20;
 
             const ctx = canvas.getContext("2d");
             ctx.fillStyle = "white";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.scale(scale, scale);
-            ctx.drawImage(img, 10, 10, width, height); // Centered with padding
+            ctx.drawImage(img, 10, 10, width, height);
 
             URL.revokeObjectURL(svgUrl);
 
@@ -682,7 +658,6 @@ class UIHandler {
     }
 
     showPresentationPreview(html) {
-        // Create a full-screen modal
         const modal = document.createElement('div');
         modal.className = 'presentation-modal';
         modal.innerHTML = `
@@ -711,11 +686,9 @@ class UIHandler {
                     border-radius: 8px; min-height: 540px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
                     page-break-after: always;
                 }
-                /* Basic reset inside slides */
                 .slide h1 { font-size: 2.5rem; margin-bottom: 1rem; }
                 .slide ul { margin-left: 2rem; }
 
-                /* Theme Awareness */
                 body.amoled-theme .slide {
                     background: #000; color: #fff; border: 1px solid #333;
                 }
@@ -752,7 +725,6 @@ class UIHandler {
     renderHistory(chats, currentChatId) {
         this.historyList.innerHTML = '';
 
-        // Sort: Pinned first, then by date (desc)
         const sortedChats = [...chats].sort((a, b) => {
             if (a.pinned && !b.pinned) return -1;
             if (!a.pinned && b.pinned) return 1;
@@ -774,7 +746,7 @@ class UIHandler {
             // Pin Button
             const pinBtn = document.createElement('button');
             pinBtn.className = 'history-action-btn';
-            pinBtn.innerHTML = chat.pinned ? '📍' : '📌';
+            pinBtn.innerHTML = this.getIcon('pin');
             pinBtn.title = chat.pinned ? 'Unpin' : 'Pin';
             pinBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -784,7 +756,7 @@ class UIHandler {
             // Rename Button
             const renameBtn = document.createElement('button');
             renameBtn.className = 'history-action-btn';
-            renameBtn.innerHTML = '✏️';
+            renameBtn.innerHTML = this.getIcon('edit');
             renameBtn.title = 'Rename';
             renameBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -797,7 +769,7 @@ class UIHandler {
             // Delete action
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'history-action-btn delete-btn';
-            deleteBtn.innerHTML = '🗑️';
+            deleteBtn.innerHTML = this.getIcon('trash');
             deleteBtn.title = 'Delete';
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -826,8 +798,45 @@ class UIHandler {
         });
     }
 
-    clearChat() {
-        this.messagesList.innerHTML = '';
-        this.welcomeScreen.style.display = 'flex';
+    renderSuggestions(onSubmit) {
+        const grid = document.getElementById('suggestion-grid');
+        if (!grid) return;
+
+        const suggestions = [
+            { title: 'History of AI', desc: 'Brief overview of artificial intelligence.' },
+            { title: 'Explain Quantum Physics', desc: 'Simple explanation for beginners.' },
+            { title: 'Write a Python Script', desc: 'To scrape a website.' },
+            { title: 'Plan a Trip', desc: '3 day itinerary for Tokyo.' }
+        ];
+
+        grid.innerHTML = '';
+        suggestions.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'suggestion-card';
+            card.innerHTML = `
+                <div class="suggestion-title">${s.title}</div>
+                <div class="suggestion-desc">${s.desc}</div>
+            `;
+            card.onclick = () => {
+                this.userInput.value = s.title + " " + s.desc;
+                this.userInput.style.height = 'auto'; // trigger resize
+                // this.userInput.focus(); // Optional
+                this.submitForm(onSubmit);
+            };
+            grid.appendChild(card);
+        });
+    }
+
+    getIcon(name) {
+        const icons = {
+            'copy': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>',
+            'edit': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',
+            'refresh': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>',
+            'download': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
+            'pin': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M16 9V4l1 1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1l1-1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>', // Simplified pin
+            'trash': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
+            'incognito': '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8z" style="display:none;"/><path d="M5.5 13.5c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5c0 1.23-.66 2.31-1.63 2.92L12 18l1.13-1.58c-.97-.61-1.63-1.69-1.63-2.92 0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5c0 1.93-1.57 3.5-3.5 3.5-1.4 0-2.61-.84-3.18-2.04C11.23 16.16 10.02 17 8.62 17c-1.72 0-3.12-1.4-3.12-3.5z"/></svg>' // Glassesish
+        };
+        return icons[name] || '';
     }
 }
