@@ -25,6 +25,10 @@ class UIHandler {
     }
 
     init(onSubmit, onHistoryAction, onSaveSettings) {
+        // Initialize Theme
+        const savedTheme = localStorage.getItem('ahamai_theme') || 'system';
+        this.applyTheme(savedTheme);
+
         // Create file input hidden
         this.fileInput = document.createElement('input');
         this.fileInput.type = 'file';
@@ -136,18 +140,34 @@ class UIHandler {
         if (this.settingsBtn && this.settingsModal) {
             this.settingsBtn.addEventListener('click', () => {
                 this.settingsModal.classList.add('open');
-                const savedInstructions = localStorage.getItem('ahamai_custom_instructions') || '';
-                document.getElementById('custom-instructions').value = savedInstructions;
+                this.loadSettings();
             });
 
             this.settingsModal.querySelector('.close-modal').addEventListener('click', () => {
                 this.settingsModal.classList.remove('open');
+                this.saveSettings();
             });
 
-            this.settingsModal.querySelector('#save-settings-btn').addEventListener('click', () => {
-                const instructions = document.getElementById('custom-instructions').value;
-                if (onSaveSettings) onSaveSettings(instructions);
-                this.settingsModal.classList.remove('open');
+            // Tab Switching Logic
+            const tabs = this.settingsModal.querySelectorAll('.settings-nav-item');
+            const panels = this.settingsModal.querySelectorAll('.settings-content-panel');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Deactivate all
+                    tabs.forEach(t => t.classList.remove('active'));
+                    panels.forEach(p => p.classList.remove('active'));
+
+                    // Activate clicked
+                    tab.classList.add('active');
+                    const targetId = `tab-${tab.dataset.tab}`;
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+
+            // Real-time Settings Listeners (Auto-save/Apply)
+            document.getElementById('theme-select').addEventListener('change', (e) => {
+                this.applyTheme(e.target.value);
             });
 
             // Data Controls
@@ -173,6 +193,7 @@ class UIHandler {
             window.addEventListener('click', (e) => {
                 if (e.target === this.settingsModal) {
                     this.settingsModal.classList.remove('open');
+                    this.saveSettings(); // Save on close
                 }
             });
         }
@@ -836,6 +857,41 @@ class UIHandler {
             };
             grid.appendChild(card);
         });
+    }
+
+    loadSettings() {
+        document.getElementById('theme-select').value = localStorage.getItem('ahamai_theme') || 'system';
+        document.getElementById('language-select').value = localStorage.getItem('ahamai_language') || 'en';
+        document.getElementById('custom-instructions').value = localStorage.getItem('ahamai_custom_instructions') || '';
+        document.getElementById('tone-select').value = localStorage.getItem('ahamai_tone') || 'neutral';
+    }
+
+    saveSettings() {
+        const theme = document.getElementById('theme-select').value;
+        const language = document.getElementById('language-select').value;
+        const instructions = document.getElementById('custom-instructions').value;
+        const tone = document.getElementById('tone-select').value;
+
+        localStorage.setItem('ahamai_theme', theme);
+        localStorage.setItem('ahamai_language', language);
+        localStorage.setItem('ahamai_custom_instructions', instructions);
+        localStorage.setItem('ahamai_tone', tone);
+    }
+
+    applyTheme(theme) {
+        // Simple theme implementation
+        if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.body.classList.add('dark-theme');
+            document.body.classList.remove('amoled-theme');
+        } else if (theme === 'amoled') {
+            document.body.classList.add('amoled-theme');
+            document.body.classList.remove('dark-theme');
+        } else {
+            document.body.classList.remove('dark-theme', 'amoled-theme');
+        }
+
+        // Persist override if explicitly set
+        if (theme !== 'system') localStorage.setItem('ahamai_theme', theme);
     }
 
     getIcon(name) {

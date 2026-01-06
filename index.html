@@ -127,21 +127,116 @@
                 <h2>Settings</h2>
                 <button class="close-modal">&times;</button>
             </div>
-            <div class="modal-body">
-                <h3>Personalization</h3>
-                <label for="custom-instructions">Custom Instructions</label>
-                <textarea id="custom-instructions" rows="5" placeholder="Enter custom instructions for the AI (e.g., 'Be concise', 'Explain like I'm 5')..."></textarea>
-                <p class="helper-text">The AI will follow these instructions in every new chat.</p>
+            <div class="settings-container">
+                <!-- Sidebar -->
+                <div class="settings-sidebar">
+                    <div class="settings-nav-item active" data-tab="general">
+                        <span>General</span>
+                    </div>
+                    <div class="settings-nav-item" data-tab="personalization">
+                        <span>Personalization</span>
+                    </div>
+                    <div class="settings-nav-item" data-tab="data">
+                        <span>Data Controls</span>
+                    </div>
+                </div>
 
-                <h3>Data Control</h3>
-                <div class="data-controls">
-                    <button id="export-all-btn" class="secondary-btn">Export All Chats</button>
-                    <button id="delete-all-btn" class="danger-btn">Delete All Chats</button>
+                <!-- Content Panels -->
+                <!-- General Tab -->
+                <div id="tab-general" class="settings-content-panel active">
+                    <div class="settings-group">
+                        <div class="settings-row">
+                            <div class="settings-label">
+                                <span>Theme</span>
+                                <span class="settings-description">Choose your preferred interface theme.</span>
+                            </div>
+                            <div class="settings-control">
+                                <select id="theme-select">
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                    <option value="amoled">Amoled Black</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                         <div class="settings-row">
+                            <div class="settings-label">
+                                <span>Language</span>
+                                <span class="settings-description">Select the interface language.</span>
+                            </div>
+                            <div class="settings-control">
+                                <select id="language-select">
+                                    <option value="en">English</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="hi">Hindi</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personalization Tab -->
+                <div id="tab-personalization" class="settings-content-panel">
+                     <div class="settings-group">
+                        <div class="settings-label" style="margin-bottom: 0.5rem;">
+                            <span>Custom Instructions</span>
+                            <span class="settings-description">What would you like the AI to know about you to provide better responses?</span>
+                        </div>
+                        <div class="settings-control">
+                             <textarea id="custom-instructions" placeholder="e.g. I am a software engineer, prefer concise code snippets..."></textarea>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="settings-row">
+                            <div class="settings-label">
+                                <span>Response Tone</span>
+                                <span class="settings-description">Adjust the personality of the AI.</span>
+                            </div>
+                            <div class="settings-control">
+                                <select id="tone-select">
+                                    <option value="neutral">Neutral</option>
+                                    <option value="professional">Professional</option>
+                                    <option value="friendly">Friendly</option>
+                                    <option value="humorous">Humorous</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Controls Tab -->
+                <div id="tab-data" class="settings-content-panel">
+                     <div class="settings-group">
+                        <div class="settings-row">
+                            <div class="settings-label">
+                                <span>Export Data</span>
+                                <span class="settings-description">Download all your chat history.</span>
+                            </div>
+                            <div class="settings-control">
+                                <button id="export-all-btn" class="secondary-btn">Export</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                         <div class="settings-row">
+                            <div class="settings-label">
+                                <span>Delete All Chats</span>
+                                <span class="settings-description">Permanently delete all chat history. This cannot be undone.</span>
+                            </div>
+                            <div class="settings-control">
+                                <button id="delete-all-btn" class="danger-btn" style="background-color: #ff4d4d; color: white;">Delete All</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button id="save-settings-btn" class="primary-btn">Save</button>
-            </div>
+            <!-- No Footer needed as changes can be auto-saved or saved on close/specific action.
+                 But to be safe, I'll add a 'Done' button or just rely on auto-save logic in JS?
+                 User wants "smooth". Auto-save on change is smoother.
+                 But for now let's just use the close button as "Done".
+            -->
         </div>
     </div>
 </body>
