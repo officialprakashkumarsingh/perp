@@ -24,6 +24,25 @@ class APIHandler {
         console.log(`Rotated Brave Key to index ${this.currentBraveKeyIndex}`);
     }
 
+    async searchWikipedia(query) {
+        try {
+            const endpoint = `https://en.wikipedia.org/w/api.php?action=query&list=search&prop=info&inprop=url&utf8=&format=json&origin=*&srlimit=3&srsearch=${encodeURIComponent(query)}`;
+            const response = await fetch(endpoint);
+            if (!response.ok) throw new Error('Wiki Error');
+            const data = await response.json();
+            if (!data.query || !data.query.search) return [];
+            return data.query.search.map(result => ({
+                title: result.title,
+                description: result.snippet.replace(/<[^>]*>/g, ''), // Strip HTML
+                url: `https://en.wikipedia.org/?curid=${result.pageid}`,
+                source: 'Wikipedia'
+            }));
+        } catch (e) {
+            console.error("Wikipedia Search Error:", e);
+            return [];
+        }
+    }
+
     async searchWeb(query) {
         let attempts = 0;
         const maxAttempts = this.braveKeys.length;
@@ -31,7 +50,7 @@ class APIHandler {
         while (attempts < maxAttempts) {
             const apiKey = this.getBraveKey();
             try {
-                const response = await fetch(`${CONFIG.BRAVE_SEARCH_URL}?q=${encodeURIComponent(query)}&count=20`, {
+                const response = await fetch(`${CONFIG.BRAVE_SEARCH_URL}?q=${encodeURIComponent(query)}&count=10`, {
                     headers: {
                         'Accept': 'application/json',
                         'X-Subscription-Token': apiKey
@@ -51,7 +70,9 @@ class APIHandler {
             }
             attempts++;
         }
-        throw new Error('All Brave Search API keys failed.');
+        // Fallback or just return empty if all fail
+        console.error('All Brave Search API keys failed.');
+        return [];
     }
 
     async chatCompletion(messages, model, onChunk, signal) {

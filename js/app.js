@@ -251,7 +251,7 @@ Capabilities:
    Do not use \`<html>\` or \`<body>\` tags, just the divs.
    Example:
    \`\`\`html
-   <div class="slide" style="background:linear-gradient(135deg, #1e3c72, #2a5298); color:white;">
+   <div class="slide" style="background-color: #1e3c72; color:white;">
      <h1>Title</h1>
      <ul><li>Point 1</li></ul>
    </div>
@@ -290,11 +290,28 @@ Instructions:
 `;
             }
 
-            // Add Custom Instructions
+            // Add Settings (Language, Tone, Custom Instructions)
             const customInstructions = localStorage.getItem('ahamai_custom_instructions');
+            const userTone = localStorage.getItem('ahamai_tone') || 'neutral';
+            const userLang = localStorage.getItem('ahamai_language') || 'en';
+
+            let toneInstruction = "";
+            if (userTone === 'professional') toneInstruction = "Use a formal, professional, and objective tone.";
+            else if (userTone === 'friendly') toneInstruction = "Use a warm, conversational, and friendly tone.";
+            else if (userTone === 'humorous') toneInstruction = "Be witty, include subtle humor, and keep it lighthearted.";
+
+            let langInstruction = "";
+            if (userLang !== 'en') {
+                 // Simple mapping, can be expanded
+                 const langs = {'es': 'Spanish', 'fr': 'French', 'hi': 'Hindi'};
+                 if (langs[userLang]) langInstruction = `Answer strictly in ${langs[userLang]}.`;
+            }
+
             if (customInstructions && customInstructions.trim()) {
                 systemPrompt += `\n\nUSER CUSTOM INSTRUCTIONS (MUST FOLLOW):\n${customInstructions.trim()}\n`;
             }
+            if (toneInstruction) systemPrompt += `\nTONE: ${toneInstruction}`;
+            if (langInstruction) systemPrompt += `\nLANGUAGE: ${langInstruction}`;
 
             if (searchContext) {
                 systemPrompt += searchContext;
