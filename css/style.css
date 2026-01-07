@@ -14,27 +14,8 @@
     --font-mono: 'Söhne Mono', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
     --font-sanskrit: 'Noto Sans Devanagari', 'Mangal', 'Arial Unicode MS', sans-serif;
 
-    --logo-font: 'Poppins', sans-serif;
+    --logo-font: 'Inter', system-ui, -apple-system, sans-serif; /* Cleaner font */
     --sidebar-width: 260px;
-}
-
-@font-face {
-    font-family: 'Poppins';
-    src: url('fonts/Poppins-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'Poppins';
-    src: url('fonts/Poppins-Medium.woff2') format('woff2');
-    font-weight: 500;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'Poppins';
-    src: url('fonts/Poppins-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
 }
 
 /* Incognito Mode - No Theme Change, just logic */
@@ -217,11 +198,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.2s;
 }
 
 .history-action-btn:hover {
     color: var(--text-primary);
-    background-color: rgba(0,0,0,0.05);
+    opacity: 1;
+    background-color: transparent;
 }
 
 .icon-svg {
@@ -1186,14 +1170,24 @@ input:checked + .slider:before {
     }
 
     .input-area-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
         padding: 0.5rem;
         padding-bottom: max(1rem, env(safe-area-inset-bottom));
         background: var(--bg-color);
         border-top: 1px solid var(--border-color);
+        z-index: 1000;
     }
 
     .chat-container {
-        padding-bottom: 10rem; /* Extra padding for mobile input area */
+        padding-bottom: 11rem; /* Extra padding for fixed mobile input area */
+    }
+
+    .bot-message-content pre {
+        max-width: 85vw;
+        overflow-x: auto;
     }
 
     /* Ensure logo in mobile header also uses code font */
