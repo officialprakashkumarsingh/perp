@@ -78,6 +78,12 @@ class UIHandler {
         const studySwitch = document.getElementById('study-switch');
         studySwitch.addEventListener('change', () => this.updateExtensionIconState());
 
+        // Research Toggle
+        const researchSwitch = document.getElementById('research-switch');
+        if (researchSwitch) {
+            researchSwitch.addEventListener('change', () => this.updateExtensionIconState());
+        }
+
         // File selection
         this.fileInput.addEventListener('change', (e) => {
             if (this.fileInput.files.length > 0) {
@@ -237,6 +243,7 @@ class UIHandler {
         const model = this.modelSelect.value;
         const isSearchEnabled = document.getElementById('search-switch').checked;
         const isStudyMode = document.getElementById('study-switch').checked;
+        const isResearchMode = document.getElementById('research-switch') ? document.getElementById('research-switch').checked : false;
         const attachment = this.currentAttachment;
 
         this.userInput.value = '';
@@ -249,7 +256,7 @@ class UIHandler {
         // Hide welcome screen
         this.welcomeScreen.style.display = 'none';
 
-        onSubmit(text, model, isSearchEnabled, isStudyMode, attachment);
+        onSubmit(text, model, isSearchEnabled, isStudyMode, isResearchMode, attachment);
     }
 
     setStopMode(isStop) {
@@ -318,9 +325,10 @@ class UIHandler {
         const extBtn = document.getElementById('extension-btn');
         const isSearch = document.getElementById('search-switch').checked;
         const isStudy = document.getElementById('study-switch').checked;
+        const isResearch = document.getElementById('research-switch') ? document.getElementById('research-switch').checked : false;
         const hasFile = !!this.currentAttachment;
 
-        if (isSearch || isStudy || hasFile) {
+        if (isSearch || isStudy || isResearch || hasFile) {
             extBtn.classList.add('active-dot');
         } else {
             extBtn.classList.remove('active-dot');

@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('ahamai_custom_instructions', instructions);
     };
 
-    const handleUserSubmit = async (query, model, isSearchEnabled, isStudyMode, attachment) => {
+    const handleUserSubmit = async (query, model, isSearchEnabled, isStudyMode, isResearchMode, attachment) => {
         // Ensure we have a chat session
         if (!chatManager.currentChatId) {
             const newChat = chatManager.createChat();
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Handle URL Reading
+        // Handle URL Reading (including YouTube)
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         const urls = query.match(urlRegex);
         let urlContext = "";
@@ -161,9 +161,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (urls && urls.length > 0) {
             for (const url of urls) {
                 try {
-                    const content = await apiHandler.fetchPageContent(url);
-                    if (content) {
-                        urlContext += `\n\n--- Content from ${url} ---\n${content}\n--- End Content ---\n`;
+                    // Check for YouTube
+                    let videoId = null;
+                    if (url.includes('youtube.com/watch?v=')) {
+                        videoId = url.split('v=')[1].split('&')[0];
+                    } else if (url.includes('youtu.be/')) {
+                        videoId = url.split('youtu.be/')[1].split('?')[0];
+                    }
+
+                    if (videoId) {
+                        const loadingStatus = uiHandler.showLoading(uiHandler.createBotMessageContainer().contentDiv);
+                        loadingStatus.textContent = "Fetching YouTube Transcript...";
+
+                        // We use the separate function from research.js (or defined here if research.js fails)
+                        if (typeof getYoutubeTranscript !== 'undefined') {
+                            const transcript = await getYoutubeTranscript(videoId);
+                            if (transcript) {
+                                urlContext += `\n\n--- YouTube Transcript (${url}) ---\n${transcript}\n--- End Transcript ---\n`;
+                            } else {
+                                urlContext += `\n\n--- YouTube Video (${url}) ---\n(Transcript could not be fetched. Analyze based on metadata/title if available.)\n`;
+                            }
+                        }
+                        loadingStatus.remove();
+                        // Remove the empty message container created for status
+                        uiHandler.messagesList.lastChild.remove();
+                    } else {
+                        // Regular URL
+                        const content = await apiHandler.fetchPageContent(url);
+                        if (content) {
+                            urlContext += `\n\n--- Content from ${url} ---\n${content}\n--- End Content ---\n`;
+                        }
                     }
                 } catch (e) {
                     console.error("Error reading URL", e);
@@ -201,9 +228,25 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            // 1. Search Web (if enabled)
+            // 1. Research / Search Logic
             let searchContext = "";
-            if (isSearchEnabled && query.trim().length > 0) {
+
+            if (isResearchMode) {
+                // Research Mode
+                if (typeof ResearchAgent !== 'undefined') {
+                    const agent = new ResearchAgent(apiHandler);
+                    const researchData = await agent.conductResearch(query, (status) => {
+                         // Update loading text
+                         loadingDiv.textContent = status;
+                    });
+
+                    searchContext = `\n\n--- Deep Research Data ---\n${researchData}\n--- End Research Data ---\n\nUser Question: ${query}\n\nTask: Write a comprehensive, "Research Paper" style answer based on the above data. Use sections like Abstract, Introduction, Findings, and Conclusion.`;
+                } else {
+                    searchContext = "\n(Research module not found. Falling back to standard mode.)";
+                }
+
+            } else if (isSearchEnabled && query.trim().length > 0) {
+                // Standard Web Search
                 try {
                     const searchResults = await apiHandler.searchWeb(query);
                     sources = searchResults;
@@ -316,7 +359,7 @@ Instructions:
             if (searchContext) {
                 systemPrompt += searchContext;
             } else {
-                if (!isStudyMode) systemPrompt += " Answer the user's question to the best of your ability.";
+                if (!isStudyMode && !isResearchMode) systemPrompt += " Answer the user's question to the best of your ability.";
             }
 
             // Build message history for context
