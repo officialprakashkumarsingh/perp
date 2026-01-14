@@ -1587,40 +1587,81 @@ input:checked + .slider:before {
     }
 }
 
-/* Water Colour Theme */
+/* Water Colour Theme - Realistic Watercolor Vibe */
 body.water-color-theme {
-    --bg-color: #F0F8FF; /* AliceBlue */
-    --sidebar-bg: #E6F3FF;
-    --border-color: #B0C4DE;
-    --text-primary: #2F4F4F; /* DarkSlateGray */
-    --text-secondary: #5D7B7B;
-    --accent-color: #4682B4; /* SteelBlue */
-    --accent-hover: #36648B;
-    --user-msg-bg: #E1EEF6;
+    --bg-color: #FDFBF7; /* Watercolour paper off-white */
+    --sidebar-bg: #E8F1F5; /* Very light wash blue */
+    --border-color: #A9C6D9; /* Soft blue outline */
+    --text-primary: #2B4C5D; /* Deep Payne's Grey/Blue */
+    --text-secondary: #587B8D; /* Muted blue-grey */
+    --accent-color: #4A90E2; /* Cerulean Blue */
+    --accent-hover: #357ABD;
+    --user-msg-bg: #E1EBF5; /* Soft blue wash */
     --bot-msg-bg: transparent;
     --input-bg: #FFFFFF;
+}
+
+body.water-color-theme .sidebar {
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid #D0E0EB;
+}
+
+body.water-color-theme .input-area {
+    border: 2px solid var(--border-color); /* More defined painted border */
+    background-color: #FAFCFF;
 }
 
 body.water-color-theme .history-item.pinned {
-    background-color: #D6EAF8;
-    border-left-color: #4682B4;
+    background-color: #D8EAF5;
+    border-left: 3px solid var(--accent-color);
 }
 
-/* Forest Theme */
+/* Forest Theme - Realistic Nature Vibe */
 body.forest-theme {
-    --bg-color: #F4F9F4; /* MintCream variant */
-    --sidebar-bg: #EBF5EB;
-    --border-color: #C1E1C1;
-    --text-primary: #1B4D3E; /* Dark Green */
-    --text-secondary: #4A6B5D;
-    --accent-color: #2E8B57; /* SeaGreen */
-    --accent-hover: #226642;
-    --user-msg-bg: #E8F3E8;
+    --bg-color: #F5F1E6; /* Parchment/Earth Light */
+    --sidebar-bg: #2C3E30; /* Deep Forest Green (Dark Sidebar) */
+    --border-color: #8B9A80; /* Mossy Green */
+    --text-primary: #1A261C; /* Dark Pine */
+    --text-secondary: #4A5D4E; /* Sage */
+    --accent-color: #4F7942; /* Fern Green */
+    --accent-hover: #3D5E32;
+    --user-msg-bg: #E3E8DE; /* Light Moss */
     --bot-msg-bg: transparent;
-    --input-bg: #FFFFFF;
+    --input-bg: #FCFAF5;
+}
+
+/* Specific overrides for Forest Theme Dark Sidebar */
+body.forest-theme .sidebar {
+    color: #E8E8E8; /* Light text on dark sidebar */
+}
+
+body.forest-theme .sidebar .logo,
+body.forest-theme .sidebar .history-item,
+body.forest-theme .sidebar .settings-btn,
+body.forest-theme .sidebar .history-label {
+    color: #E8E8E8;
+}
+
+body.forest-theme .sidebar .history-item:hover,
+body.forest-theme .sidebar .history-item.active {
+    background-color: #3D5242; /* Lighter green for hover */
+}
+
+body.forest-theme .sidebar-footer {
+    border-top: 1px solid #3D5242;
+}
+
+body.forest-theme #new-chat-btn {
+    background-color: #3D5242;
+    color: #FFF;
+    border-color: #4F6654;
+}
+
+body.forest-theme #new-chat-btn:hover {
+    background-color: #4F6654;
 }
 
 body.forest-theme .history-item.pinned {
-    background-color: #DFF0DF;
-    border-left-color: #2E8B57;
+    background-color: #344C39;
+    border-left-color: #8FA893;
 }
