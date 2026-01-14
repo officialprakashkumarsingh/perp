@@ -14,7 +14,7 @@
     --font-mono: 'Söhne Mono', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
     --font-sanskrit: 'Noto Sans Devanagari', 'Mangal', 'Arial Unicode MS', sans-serif;
 
-    --logo-font: 'Pacifico', 'Poppins', 'Outfit', 'Inter', system-ui, -apple-system, sans-serif; /* Cleaner font */
+    --logo-font: 'Outfit', 'Poppins', 'Inter', system-ui, -apple-system, sans-serif; /* Cleaner font */
     --sidebar-width: 260px;
 }
 
@@ -291,7 +291,7 @@ body {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 2100; /* Higher than sidebar (2000) */
     left: 0;
     top: 0;
     width: 100%;
@@ -1052,6 +1052,8 @@ textarea {
 .bot-message-content img {
     max-width: 100%;
     height: auto;
+    max-height: 80vh; /* Optimize for mobile - don't take full height */
+    object-fit: contain;
     border-radius: 12px;
     margin: 1rem 0;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);

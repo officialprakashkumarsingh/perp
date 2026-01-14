@@ -501,54 +501,63 @@ class UIHandler {
     }
 
     updateBotMessage(container, text) {
+        let cleanText = text;
+        let quizDataToRender = null;
+        let flashcardsDataToRender = null;
+
+        // Quiz Detection & Extraction
+        const quizMatch = text.match(/\[QUIZ_JSON\]([\s\S]*?)\[\/QUIZ_JSON\]/);
+        if (quizMatch) {
+            try {
+                quizDataToRender = JSON.parse(quizMatch[1]);
+                // Remove the JSON block from the text to be rendered
+                cleanText = cleanText.replace(quizMatch[0], '');
+            } catch (e) {
+                console.error("Quiz JSON parse error", e);
+            }
+        }
+
+        // Flashcards Detection & Extraction
+        const flashMatch = text.match(/\[FLASHCARDS_JSON\]([\s\S]*?)\[\/FLASHCARDS_JSON\]/);
+        if (flashMatch) {
+            try {
+                flashcardsDataToRender = JSON.parse(flashMatch[1]);
+                // Remove the JSON block from the text to be rendered
+                cleanText = cleanText.replace(flashMatch[0], '');
+            } catch (e) {
+                console.error("Flashcards JSON parse error", e);
+            }
+        }
+
         let markdownHtml = "";
         if (typeof marked !== 'undefined') {
-            markdownHtml = marked.parse(text);
+            markdownHtml = marked.parse(cleanText);
         } else {
-            markdownHtml = this.escapeHtml(text);
+            markdownHtml = this.escapeHtml(cleanText);
         }
 
         container.innerHTML = markdownHtml;
 
+        // Render Widgets (Append to container so listeners are preserved)
+        if (quizDataToRender) {
+            // Only render if not already there? No, we just wiped innerHTML.
+            // But we must render it now.
+            this.renderQuiz(container, quizDataToRender);
+        }
+
+        if (flashcardsDataToRender) {
+             this.renderFlashcards(container, flashcardsDataToRender);
+        }
+
         // Presentation Detection
         if (text.includes('<div class="slide">')) {
-            // Check if preview button exists
+            // Check if preview button exists (it won't because we wiped innerHTML, so we add it)
             if (!container.querySelector('.presentation-preview-btn')) {
                 const previewBtn = document.createElement('button');
                 previewBtn.className = 'presentation-preview-btn';
                 previewBtn.innerHTML = '🎬 Preview Presentation';
                 previewBtn.onclick = () => this.showPresentationPreview(text);
                 container.insertBefore(previewBtn, container.firstChild);
-            }
-        }
-
-        // Quiz Detection
-        if (text.includes('[QUIZ_JSON]')) {
-            const match = text.match(/\[QUIZ_JSON\]([\s\S]*?)\[\/QUIZ_JSON\]/);
-            if (match && !container.querySelector('.quiz-container')) {
-                try {
-                    const quizData = JSON.parse(match[1]);
-                    this.renderQuiz(container, quizData);
-                    // Hide raw JSON from display by replacing it with empty string or styling
-                    container.innerHTML = container.innerHTML.replace(match[0], '');
-                } catch (e) {
-                    console.error("Quiz JSON parse error", e);
-                }
-            }
-        }
-
-        // Flashcards Detection
-        if (text.includes('[FLASHCARDS_JSON]')) {
-            const match = text.match(/\[FLASHCARDS_JSON\]([\s\S]*?)\[\/FLASHCARDS_JSON\]/);
-            if (match && !container.querySelector('.flashcards-container')) {
-                try {
-                    const cardsData = JSON.parse(match[1]);
-                    this.renderFlashcards(container, cardsData);
-                    // Hide raw JSON
-                    container.innerHTML = container.innerHTML.replace(match[0], '');
-                } catch (e) {
-                    console.error("Flashcards JSON parse error", e);
-                }
             }
         }
 

@@ -286,9 +286,10 @@ Capabilities:
 
 4. **Image Generation**: You can generate images using Pollinations AI.
    To generate an image, you MUST use this exact Markdown format:
-   \`![Image Description](https://image.pollinations.ai/prompt/{description}?width=768&height=1024&nologo=true&key=${CONFIG.POLLINATIONS_API_KEY})\`
+   \`![Image Description](https://image.pollinations.ai/prompt/{description}?width=768&height=1024&seed={random}&nologo=true)\`
    Replace \`{description}\` with a URL-encoded detailed prompt for the image.
-   Example: \`![A futuristic city](https://image.pollinations.ai/prompt/futuristic%20city%20sunset?width=768&height=1024&nologo=true&key=${CONFIG.POLLINATIONS_API_KEY})\`
+   Replace \`{random}\` with a random integer seed (e.g. 12345).
+   Example: \`![A futuristic city](https://image.pollinations.ai/prompt/futuristic%20city%20sunset?width=768&height=1024&seed=54321&nologo=true)\`
    Do NOT use any other API or format. Generate images when the user explicitly asks or when it adds significant value.
 
 5. **Presentations**: You can generate stylish, themed presentations.
