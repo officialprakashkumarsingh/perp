@@ -112,3 +112,17 @@
 127.0.0.1 - - [14/Jan/2026 09:38:20] "GET /js/marked.js HTTP/1.1" 200 -
 127.0.0.1 - - [14/Jan/2026 09:38:20] "GET /js/ui.js HTTP/1.1" 200 -
 127.0.0.1 - - [14/Jan/2026 09:38:20] "GET /js/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /css/katex.min.css HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/config.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/pdf.min.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/katex.min.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/mermaid.min.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/jszip.min.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/html2pdf.bundle.min.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/file_loader.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/api.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/marked.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/ui.js HTTP/1.1" 200 -
+127.0.0.1 - - [14/Jan/2026 10:33:20] "GET /js/app.js HTTP/1.1" 200 -

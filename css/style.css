@@ -14,7 +14,7 @@
     --font-mono: 'Söhne Mono', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
     --font-sanskrit: 'Noto Sans Devanagari', 'Mangal', 'Arial Unicode MS', sans-serif;
 
-    --logo-font: 'Poppins', 'Outfit', 'Inter', system-ui, -apple-system, sans-serif; /* Cleaner font */
+    --logo-font: 'Pacifico', 'Poppins', 'Outfit', 'Inter', system-ui, -apple-system, sans-serif; /* Cleaner font */
     --sidebar-width: 260px;
 }
 
@@ -1373,5 +1373,48 @@ input:checked + .slider:before {
         right: 10px;
         left: 10px; /* Full width minus margins on mobile */
         width: auto;
+    }
+
+    /* Mobile Settings Modal Optimization */
+    .modal-content {
+        width: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
+        border-radius: 0;
+        border: none;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .settings-container {
+        flex-direction: column;
+    }
+
+    .settings-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 0.5rem;
+        flex-direction: row;
+        overflow-x: auto;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .settings-nav-item {
+        padding: 0.5rem 1rem;
+        border-radius: 99px;
+        background: transparent;
+    }
+
+    .settings-nav-item.active {
+        background: var(--accent-color);
+        color: white;
+    }
+
+    .settings-content-panel {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 2rem;
     }
 }
