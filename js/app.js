@@ -124,7 +124,31 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('ahamai_custom_instructions', instructions);
     };
 
+    // Queue System
+    const requestQueue = [];
+    let isGenerating = false;
+
+    const processQueue = async () => {
+        if (isGenerating || requestQueue.length === 0) return;
+
+        const nextRequest = requestQueue.shift();
+        uiHandler.updateQueuePanel(requestQueue); // Update UI
+        await handleUserSubmit(nextRequest.query, nextRequest.model, nextRequest.isSearchEnabled, nextRequest.isStudyMode, nextRequest.attachment);
+
+        // Process next after delay to ensure cleanup
+        setTimeout(processQueue, 500);
+    };
+
     const handleUserSubmit = async (query, model, isSearchEnabled, isStudyMode, attachment) => {
+        // Check if busy
+        if (isGenerating) {
+            requestQueue.push({ query, model, isSearchEnabled, isStudyMode, attachment });
+            uiHandler.updateQueuePanel(requestQueue);
+            return;
+        }
+
+        isGenerating = true;
+
         // Ensure we have a chat session
         if (!chatManager.currentChatId) {
             const newChat = chatManager.createChat();
@@ -191,12 +215,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 abortController.abort();
                 uiHandler.setStopMode(false);
                 uiHandler.removeLoading(loadingDiv);
+                isGenerating = false; // Reset flag
                 // Finalize what we have
                 chatManager.addMessageToChat(chatManager.currentChatId, {
                     role: 'assistant',
                     content: finalAnswer + "\n[Stopped by user]",
                     sources: sources
                 });
+                processQueue(); // Check for next
             }
         };
 
@@ -238,12 +264,7 @@ Capabilities:
 
 3. **Attachments**: The user may provide text from attached files (PDF, code, text, zip). Use this context to answer questions.
 
-4. **Image Generation**: You can generate images using Pollinations AI.
-   To generate an image, you MUST use this exact Markdown format:
-   \`![Image Description](https://image.pollinations.ai/prompt/{description}?nologo=true)\`
-   Replace \`{description}\` with a URL-encoded detailed prompt for the image.
-   Example: \`![A futuristic city](https://image.pollinations.ai/prompt/futuristic%20city%20sunset?nologo=true)\`
-   Do NOT use any other API or format. Generate images when the user explicitly asks or when it adds significant value.
+4. **Image Generation**: Image generation is currently disabled. Do not generate images.
 
 5. **Presentations**: You can generate stylish, themed presentations.
    To do this, output a single HTML block containing multiple \`<div class="slide">\` elements.
@@ -267,8 +288,8 @@ Capabilities:
 
 Instructions:
 - If the user asks to "draw" or "visualize" a system, process, or chart, ALWAYS provide a Mermaid diagram.
-- If the user asks to "generate an image" or "show a picture", use the Pollinations AI markdown format.
 - If the user asks for a "presentation" or "slides", generate the HTML slide format described above.
+- If you learn something new and specific about the user (e.g., name, profession, preferences), output a memory tag at the end of your response like this: \`[MEMORY: User is a software engineer]\`.
 - Be concise and helpful.
 `;
 
@@ -295,6 +316,13 @@ Instructions:
             const userTone = localStorage.getItem('ahamai_tone') || 'neutral';
             const userLang = localStorage.getItem('ahamai_language') || 'en';
 
+            // Load Memories
+            const memories = JSON.parse(localStorage.getItem('ahamai_memories') || '[]');
+            let memoryContext = "";
+            if (memories.length > 0) {
+                memoryContext = "\n\nMEMORIES ABOUT USER:\n" + memories.map(m => `- ${m}`).join('\n');
+            }
+
             let toneInstruction = "";
             if (userTone === 'professional') toneInstruction = "Use a formal, professional, and objective tone.";
             else if (userTone === 'friendly') toneInstruction = "Use a warm, conversational, and friendly tone.";
@@ -309,6 +337,9 @@ Instructions:
 
             if (customInstructions && customInstructions.trim()) {
                 systemPrompt += `\n\nUSER CUSTOM INSTRUCTIONS (MUST FOLLOW):\n${customInstructions.trim()}\n`;
+            }
+            if (memoryContext) {
+                systemPrompt += memoryContext;
             }
             if (toneInstruction) systemPrompt += `\nTONE: ${toneInstruction}`;
             if (langInstruction) systemPrompt += `\nLANGUAGE: ${langInstruction}`;
@@ -341,7 +372,22 @@ Instructions:
                 uiHandler.updateBotMessage(contentDiv, fullResponse);
             }, abortController.signal);
 
-            finalAnswer = fullResponse;
+            // Process Memories in response
+            const memoryRegex = /\[MEMORY: (.*?)\]/g;
+            let match;
+            while ((match = memoryRegex.exec(fullResponse)) !== null) {
+                const newMemory = match[1];
+                const currentMemories = JSON.parse(localStorage.getItem('ahamai_memories') || '[]');
+                if (!currentMemories.includes(newMemory)) {
+                    currentMemories.push(newMemory);
+                    localStorage.setItem('ahamai_memories', JSON.stringify(currentMemories));
+                }
+            }
+
+            // Clean response for display (remove memory tags)
+            finalAnswer = fullResponse.replace(memoryRegex, '').trim();
+            uiHandler.updateBotMessage(contentDiv, finalAnswer); // Update final clean message
+
             uiHandler.setStopMode(false);
 
             // Show Actions (Copy, Regenerate, Export)
@@ -370,7 +416,26 @@ Instructions:
                 sources: sources
             });
         }
+
+        isGenerating = false;
+        processQueue();
     };
 
+    // Use a wrapper to intercept initial submit vs queue calls?
+    // handleUserSubmit now handles the queue check internally if called directly.
+    // However, uiHandler calls it.
+
     uiHandler.init(handleUserSubmit, handleHistoryAction, handleSaveSettings);
+
+    // URL Parameter Handling (OpenSearch/Query)
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryParam = urlParams.get('q');
+    if (queryParam) {
+        // Remove query param from URL without reload
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+
+        // Trigger submit
+        handleUserSubmit(queryParam, CONFIG.MODELS[0], true, false, null);
+    }
 });

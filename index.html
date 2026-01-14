@@ -6,7 +6,13 @@
     <title>AhamAI</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/katex.min.css">
-    <!-- Preload fonts or icons if needed, using unicode for icons to keep it simple -->
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Outfit:wght@400;500;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- OpenSearch -->
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="AhamAI">
 </head>
 <body>
     <div class="app-container">
@@ -104,6 +110,18 @@
                     AhamAI can make mistakes. Please verify important information.
                 </div>
             </div>
+
+            <!-- Queue Panel -->
+            <div id="queue-panel" class="queue-panel hidden">
+                <div class="queue-header">
+                    <span>Pending Queries</span>
+                    <span id="queue-count" class="queue-count">0</span>
+                    <button id="queue-toggle" class="queue-toggle">▼</button>
+                </div>
+                <ul id="queue-list" class="queue-list">
+                    <!-- Queue items injected here -->
+                </ul>
+            </div>
         </main>
     </div>
 
@@ -155,6 +173,7 @@
                                     <option value="light">Light</option>
                                     <option value="dark">Dark</option>
                                     <option value="amoled">Amoled Black</option>
+                                    <option value="cream-orange">Cream & Orange</option>
                                 </select>
                             </div>
                         </div>

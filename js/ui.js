@@ -18,6 +18,12 @@ class UIHandler {
         this.onHistoryAction = null;
         this.isIncognito = false;
 
+        // Queue Elements
+        this.queuePanel = document.getElementById('queue-panel');
+        this.queueList = document.getElementById('queue-list');
+        this.queueCount = document.getElementById('queue-count');
+        this.queueToggle = document.getElementById('queue-toggle');
+
         // Initialize Mermaid
         if (typeof mermaid !== 'undefined') {
             mermaid.initialize({ startOnLoad: false, theme: 'default' });
@@ -222,6 +228,14 @@ class UIHandler {
                 }
             }
         });
+
+        // Queue Toggle
+        if (this.queueToggle) {
+            this.queueToggle.addEventListener('click', () => {
+                this.queueList.style.display = this.queueList.style.display === 'none' ? 'block' : 'none';
+                this.queueToggle.textContent = this.queueList.style.display === 'none' ? '▲' : '▼';
+            });
+        }
 
         // Setup History Actions callbacks
         this.onHistoryAction = onHistoryAction;
@@ -743,14 +757,98 @@ class UIHandler {
     }
 
     showCodePreview(code, lang) {
-        const win = window.open("", "Code Preview", "width=800,height=600");
-        let content = "";
-        if (lang === 'html') content = code;
-        else if (lang === 'css') content = `<style>${code}</style><h1>CSS Preview</h1>`;
-        else if (lang === 'js' || lang === 'javascript') content = `<script>${code}<\/script><h1>JS Executed (Check Console)</h1>`;
+        // Create Modal
+        const modal = document.createElement('div');
+        modal.className = 'preview-modal';
 
-        win.document.write(content);
-        win.document.close();
+        const content = document.createElement('div');
+        content.className = 'preview-content';
+
+        const header = document.createElement('div');
+        header.className = 'preview-header';
+
+        const title = document.createElement('div');
+        title.className = 'preview-title';
+        title.innerHTML = '👁️ Preview';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'preview-close';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.onclick = () => modal.remove();
+
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+
+        const frameContainer = document.createElement('div');
+        frameContainer.className = 'preview-frame-container';
+
+        const frame = document.createElement('iframe');
+        frame.className = 'preview-frame';
+        frameContainer.appendChild(frame);
+
+        content.appendChild(header);
+        content.appendChild(frameContainer);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Write content to iframe
+        const doc = frame.contentWindow.document;
+        doc.open();
+
+        let htmlContent = "";
+        if (lang === 'html') {
+            htmlContent = code;
+        } else if (lang === 'css') {
+            htmlContent = `
+                <html><head><style>${code}</style></head>
+                <body><h1>CSS Preview</h1><p>This is a sample paragraph to demonstrate styles.</p>
+                <button>Sample Button</button>
+                <div class="box">Sample Box</div>
+                </body></html>`;
+        } else if (lang === 'js' || lang === 'javascript') {
+            htmlContent = `
+                <html><body>
+                <h1>JS Preview</h1>
+                <div id="console-output" style="background:#f4f4f4; padding:10px; border:1px solid #ddd; font-family:monospace;"></div>
+                <script>
+                    // Redirect console.log to div
+                    const logDiv = document.getElementById('console-output');
+                    const originalLog = console.log;
+                    console.log = function(...args) {
+                        logDiv.innerHTML += args.join(' ') + '<br>';
+                        originalLog.apply(console, args);
+                    };
+                    try {
+                        ${code}
+                    } catch(e) {
+                        console.log('Error: ' + e.message);
+                    }
+                </script>
+                </body></html>`;
+        }
+
+        doc.write(htmlContent);
+        doc.close();
+    }
+
+    updateQueuePanel(queue) {
+        if (!this.queuePanel) return;
+
+        if (queue.length === 0) {
+            this.queuePanel.classList.add('hidden');
+            return;
+        }
+
+        this.queuePanel.classList.remove('hidden');
+        this.queueCount.textContent = queue.length;
+        this.queueList.innerHTML = '';
+
+        queue.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'queue-item';
+            li.textContent = item.query.substring(0, 30) + (item.query.length > 30 ? '...' : '');
+            this.queueList.appendChild(li);
+        });
     }
 
     // History UI Methods
@@ -880,14 +978,14 @@ class UIHandler {
 
     applyTheme(theme) {
         // Simple theme implementation
+        document.body.classList.remove('dark-theme', 'amoled-theme', 'cream-orange-theme');
+
         if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.body.classList.add('dark-theme');
-            document.body.classList.remove('amoled-theme');
         } else if (theme === 'amoled') {
             document.body.classList.add('amoled-theme');
-            document.body.classList.remove('dark-theme');
-        } else {
-            document.body.classList.remove('dark-theme', 'amoled-theme');
+        } else if (theme === 'cream-orange') {
+            document.body.classList.add('cream-orange-theme');
         }
 
         // Persist override if explicitly set

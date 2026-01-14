@@ -62,5 +62,6 @@ const CONFIG = {
         'zai-glm-4.6'
     ],
     BRAVE_SEARCH_URL: 'https://api.search.brave.com/res/v1/web/search',
-    CEREBRAS_API_URL: 'https://api.cerebras.ai/v1/chat/completions'
+    CEREBRAS_API_URL: 'https://api.cerebras.ai/v1/chat/completions',
+    POLLINATIONS_API_KEY: 'sk_IEZbgKtGzdMBHPzIA7I9zJxVTSlBB9os'
 };
