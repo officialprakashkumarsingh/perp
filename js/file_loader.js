@@ -1,6 +1,8 @@
 // Initialize PDF.js worker
 if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
+} else if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
 }
 
 const extractTextFromFile = async (file) => {
@@ -39,19 +41,40 @@ const extractTextFromFile = async (file) => {
 };
 
 const extractTextFromPDF = async (file) => {
-    if (typeof pdfjsLib === 'undefined') throw new Error("PDF.js not loaded.");
-    const arrayBuffer = await file.arrayBuffer();
-    const typedArray = new Uint8Array(arrayBuffer);
-    const loadingTask = pdfjsLib.getDocument({ data: typedArray });
-    const pdf = await loadingTask.promise;
-    let fullText = "";
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += `[Page ${i}]\n${pageText}\n\n`;
+    const lib = typeof pdfjsLib !== 'undefined' ? pdfjsLib : window.pdfjsLib;
+    if (!lib) throw new Error("PDF.js library not loaded.");
+
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const typedArray = new Uint8Array(arrayBuffer);
+
+        // Ensure worker is set
+        if (!lib.GlobalWorkerOptions.workerSrc) {
+            lib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
+        }
+
+        const loadingTask = lib.getDocument({ data: typedArray });
+        const pdf = await loadingTask.promise;
+        let fullText = "";
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+
+            // Better text joining with newlines for layout preservation
+            // Filter out empty strings
+            const pageText = textContent.items
+                .map(item => item.str)
+                .filter(str => str.trim().length > 0)
+                .join('\n');
+
+            fullText += `[Page ${i}]\n${pageText}\n\n`;
+        }
+        return fullText;
+    } catch (e) {
+        console.error("PDF Extraction Detail Error:", e);
+        throw new Error(`PDF Parsing failed: ${e.message}`);
     }
-    return fullText;
 };
 
 const extractTextFromZip = async (file) => {

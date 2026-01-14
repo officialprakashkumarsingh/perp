@@ -1586,3 +1586,41 @@ input:checked + .slider:before {
         background-color: white !important; /* Default fallback */
     }
 }
+
+/* Water Colour Theme */
+body.water-color-theme {
+    --bg-color: #F0F8FF; /* AliceBlue */
+    --sidebar-bg: #E6F3FF;
+    --border-color: #B0C4DE;
+    --text-primary: #2F4F4F; /* DarkSlateGray */
+    --text-secondary: #5D7B7B;
+    --accent-color: #4682B4; /* SteelBlue */
+    --accent-hover: #36648B;
+    --user-msg-bg: #E1EEF6;
+    --bot-msg-bg: transparent;
+    --input-bg: #FFFFFF;
+}
+
+body.water-color-theme .history-item.pinned {
+    background-color: #D6EAF8;
+    border-left-color: #4682B4;
+}
+
+/* Forest Theme */
+body.forest-theme {
+    --bg-color: #F4F9F4; /* MintCream variant */
+    --sidebar-bg: #EBF5EB;
+    --border-color: #C1E1C1;
+    --text-primary: #1B4D3E; /* Dark Green */
+    --text-secondary: #4A6B5D;
+    --accent-color: #2E8B57; /* SeaGreen */
+    --accent-hover: #226642;
+    --user-msg-bg: #E8F3E8;
+    --bot-msg-bg: transparent;
+    --input-bg: #FFFFFF;
+}
+
+body.forest-theme .history-item.pinned {
+    background-color: #DFF0DF;
+    border-left-color: #2E8B57;
+}
