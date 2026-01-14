@@ -84,6 +84,12 @@ class UIHandler {
         const studySwitch = document.getElementById('study-switch');
         studySwitch.addEventListener('change', () => this.updateExtensionIconState());
 
+        // Wiki Toggle
+        const wikiSwitch = document.getElementById('wiki-switch');
+        if (wikiSwitch) {
+            wikiSwitch.addEventListener('change', () => this.updateExtensionIconState());
+        }
+
         // File selection
         this.fileInput.addEventListener('change', (e) => {
             if (this.fileInput.files.length > 0) {
@@ -332,9 +338,10 @@ class UIHandler {
         const extBtn = document.getElementById('extension-btn');
         const isSearch = document.getElementById('search-switch').checked;
         const isStudy = document.getElementById('study-switch').checked;
+        const isWiki = document.getElementById('wiki-switch') ? document.getElementById('wiki-switch').checked : false;
         const hasFile = !!this.currentAttachment;
 
-        if (isSearch || isStudy || hasFile) {
+        if (isSearch || isStudy || hasFile || isWiki) {
             extBtn.classList.add('active-dot');
         } else {
             extBtn.classList.remove('active-dot');
@@ -515,6 +522,36 @@ class UIHandler {
             }
         }
 
+        // Quiz Detection
+        if (text.includes('[QUIZ_JSON]')) {
+            const match = text.match(/\[QUIZ_JSON\]([\s\S]*?)\[\/QUIZ_JSON\]/);
+            if (match && !container.querySelector('.quiz-container')) {
+                try {
+                    const quizData = JSON.parse(match[1]);
+                    this.renderQuiz(container, quizData);
+                    // Hide raw JSON from display by replacing it with empty string or styling
+                    container.innerHTML = container.innerHTML.replace(match[0], '');
+                } catch (e) {
+                    console.error("Quiz JSON parse error", e);
+                }
+            }
+        }
+
+        // Flashcards Detection
+        if (text.includes('[FLASHCARDS_JSON]')) {
+            const match = text.match(/\[FLASHCARDS_JSON\]([\s\S]*?)\[\/FLASHCARDS_JSON\]/);
+            if (match && !container.querySelector('.flashcards-container')) {
+                try {
+                    const cardsData = JSON.parse(match[1]);
+                    this.renderFlashcards(container, cardsData);
+                    // Hide raw JSON
+                    container.innerHTML = container.innerHTML.replace(match[0], '');
+                } catch (e) {
+                    console.error("Flashcards JSON parse error", e);
+                }
+            }
+        }
+
         // Code Block Preview
         const codeBlocks = container.querySelectorAll('pre code');
         codeBlocks.forEach(code => {
@@ -646,6 +683,130 @@ class UIHandler {
             document.body.removeChild(a);
         };
         img.src = svgUrl;
+    }
+
+    renderQuiz(container, quizData) {
+        const quizContainer = document.createElement('div');
+        quizContainer.className = 'quiz-container';
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userAnswers = {};
+
+        const renderQuestion = () => {
+            const q = quizData.questions[currentQuestionIndex];
+            quizContainer.innerHTML = `
+                <div class="quiz-question">${currentQuestionIndex + 1}. ${q.question}</div>
+                <div class="quiz-options">
+                    ${q.options.map((opt, i) => `
+                        <div class="quiz-option" data-index="${i}">${opt}</div>
+                    `).join('')}
+                </div>
+                <div class="quiz-footer">
+                    <div class="quiz-progress">Question ${currentQuestionIndex + 1} of ${quizData.questions.length}</div>
+                    <div class="quiz-score" style="display:none">Score: ${score}</div>
+                </div>
+            `;
+
+            // Add click handlers
+            quizContainer.querySelectorAll('.quiz-option').forEach(opt => {
+                opt.addEventListener('click', (e) => {
+                    const selectedIndex = parseInt(e.target.dataset.index);
+                    const isCorrect = selectedIndex === q.answerIndex;
+
+                    // Show result immediately
+                    e.target.classList.add(isCorrect ? 'correct' : 'incorrect');
+                    if (!isCorrect) {
+                        // Highlight correct one
+                        const correctOpt = quizContainer.querySelector(`.quiz-option[data-index="${q.answerIndex}"]`);
+                        if (correctOpt) correctOpt.classList.add('correct');
+                    } else {
+                        score++;
+                    }
+
+                    // Disable all
+                    quizContainer.querySelectorAll('.quiz-option').forEach(o => {
+                        o.style.pointerEvents = 'none';
+                    });
+
+                    // Next question delay
+                    setTimeout(() => {
+                        currentQuestionIndex++;
+                        if (currentQuestionIndex < quizData.questions.length) {
+                            renderQuestion();
+                        } else {
+                            renderResult();
+                        }
+                    }, 1500);
+                });
+            });
+        };
+
+        const renderResult = () => {
+            const percentage = Math.round((score / quizData.questions.length) * 100);
+            quizContainer.innerHTML = `
+                <div class="quiz-question">Quiz Completed!</div>
+                <div style="font-size: 2rem; color: var(--accent-color); font-weight: bold; margin: 1rem 0;">
+                    ${score} / ${quizData.questions.length}
+                </div>
+                <div>Result: ${percentage}%</div>
+                <button class="primary-btn" style="margin-top: 1rem;">Retry Quiz</button>
+            `;
+            quizContainer.querySelector('button').onclick = () => {
+                currentQuestionIndex = 0;
+                score = 0;
+                renderQuestion();
+            };
+        };
+
+        container.appendChild(quizContainer);
+        renderQuestion();
+    }
+
+    renderFlashcards(container, cardsData) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flashcards-container';
+
+        let currentIndex = 0;
+
+        const renderCard = () => {
+            const card = cardsData.cards[currentIndex];
+            wrapper.innerHTML = `
+                <div class="flashcard-wrapper">
+                    <div class="flashcard">
+                        <div class="flashcard-face front">${card.front}</div>
+                        <div class="flashcard-face back">${card.back}</div>
+                    </div>
+                </div>
+                <div class="flashcard-controls">
+                    <button class="flashcard-btn prev-card">←</button>
+                    <span>${currentIndex + 1} / ${cardsData.cards.length}</span>
+                    <button class="flashcard-btn next-card">→</button>
+                </div>
+            `;
+
+            const cardEl = wrapper.querySelector('.flashcard');
+            cardEl.addEventListener('click', () => {
+                cardEl.classList.toggle('flipped');
+            });
+
+            wrapper.querySelector('.prev-card').addEventListener('click', () => {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    renderCard();
+                }
+            });
+
+            wrapper.querySelector('.next-card').addEventListener('click', () => {
+                if (currentIndex < cardsData.cards.length - 1) {
+                    currentIndex++;
+                    renderCard();
+                }
+            });
+        };
+
+        container.appendChild(wrapper);
+        renderCard();
     }
 
     renderLatexManual(container) {
