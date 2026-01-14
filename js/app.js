@@ -232,45 +232,70 @@ document.addEventListener('DOMContentLoaded', () => {
             let searchContext = "";
             let sources = [];
 
-            if (isWikiEnabled && query.trim().length > 0) {
-                try {
-                    // Fetch Deep Wikipedia Content
-                    const wikiResults = await apiHandler.searchWikipedia(query, true); // true for deep search
-                    if (wikiResults && wikiResults.length > 0) {
-                        sources = wikiResults;
-                        uiHandler.renderSources(sourcesDiv, sources);
+            // Broad Search Logic: Combine Wiki and Web (Brave) + News
+            if ((isWikiEnabled || isSearchEnabled) && query.trim().length > 0) {
+                const searchPromises = [];
 
-                        searchContext = `\n\n--- WIKIPEDIA KNOWLEDGE ---\n`;
-                        wikiResults.forEach((result, index) => {
-                            searchContext += `Source [${index + 1}]: ${result.title}\nURL: ${result.url}\nContent: ${result.fullContent || result.description}\n\n`;
-                        });
-                        searchContext += `--- END WIKIPEDIA ---\n\nUse this detailed information to provide a comprehensive answer. Cite sources as [Wiki:Title].`;
-                    }
-                } catch (wikiError) {
-                    console.error("Wiki search failed", wikiError);
+                // Wikipedia (if explicitly enabled OR broad web search)
+                // User asked for "data from wikipedia" in web search
+                searchPromises.push(apiHandler.searchWikipedia(query, true).catch(e => {
+                    console.error("Wiki search failed", e);
+                    return [];
+                }));
+
+                // Web Search & News (if enabled)
+                if (isSearchEnabled) {
+                    // Standard Search
+                    searchPromises.push(apiHandler.searchWeb(query).catch(e => {
+                         console.error("Brave search failed", e);
+                         return [];
+                    }));
+
+                    // News / Broad Search (India + World context)
+                    // We append "latest news" to try and catch RSS/News results
+                    const newsQuery = query + " latest news India world";
+                    searchPromises.push(apiHandler.searchWeb(newsQuery).catch(e => {
+                         console.error("Brave news search failed", e);
+                         return [];
+                    }));
                 }
-            } else if (isSearchEnabled && query.trim().length > 0) {
-                try {
-                    const searchResults = await apiHandler.searchWeb(query);
-                    sources = searchResults;
-                    uiHandler.renderSources(sourcesDiv, searchResults);
 
-                    if (searchResults && searchResults.length > 0) {
-                        searchContext = "\n\nUse the following search results to answer the user's question:\n";
-                        searchResults.forEach((result, index) => {
-                            searchContext += `[${index + 1}] ${result.title}: ${result.description}\nURL: ${result.url}\n\n`;
-                        });
-                        searchContext += "Cite the sources using [number] notation where appropriate.";
+                try {
+                    const resultsArray = await Promise.all(searchPromises);
+                    const allSources = resultsArray.flat();
+
+                    // Deduplicate by URL
+                    const seenUrls = new Set();
+                    sources = [];
+                    for (const s of allSources) {
+                        if (!s.url || seenUrls.has(s.url)) continue;
+                        seenUrls.add(s.url);
+                        sources.push(s);
                     }
-                } catch (searchError) {
-                    console.error("Search failed, continuing without sources", searchError);
-                    searchContext = "\n(Web search failed, please answer based on internal knowledge)";
+
+                    uiHandler.renderSources(sourcesDiv, sources);
+
+                    if (sources.length > 0) {
+                         searchContext = `\n\n--- SEARCH RESULTS (Wiki, Web, News) ---\n`;
+                         sources.forEach((result, index) => {
+                             const content = result.fullContent || result.description || "No description available.";
+                             searchContext += `Source [${index + 1}] (${result.source || 'Web'}): ${result.title}\nURL: ${result.url}\nContent: ${content}\n\n`;
+                         });
+                         searchContext += `--- END SEARCH RESULTS ---\n\nUse this detailed information to provide a comprehensive and latest answer. Cite sources as [number].`;
+                    } else if (isSearchEnabled) {
+                        searchContext = "\n(Search performed but no results found. Please answer based on internal knowledge)";
+                    }
+
+                } catch (e) {
+                    console.error("Error processing search results", e);
+                    searchContext = "\n(Search error, please answer based on internal knowledge)";
                 }
             }
 
             // 2. Prepare Context with Date/Time and Capabilities
-            const currentDate = new Date().toLocaleString();
+            const currentDate = new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'medium' });
             let systemPrompt = `Current Date and Time: ${currentDate}. You are AhamAI, a helpful AI assistant.
+IMPORTANT: You must always provide the latest information available, especially for current events. Use the provided search results to verify the current status of events.
 
 Capabilities:
 1. **Diagrams**: You can generate diagrams, flowcharts, graphs, and visualizations using Mermaid.js. When a user asks for a diagram, output a code block with the language set to \`mermaid\`.

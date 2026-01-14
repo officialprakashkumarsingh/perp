@@ -1148,7 +1148,7 @@ class UIHandler {
 
     applyTheme(theme) {
         // Simple theme implementation
-        document.body.classList.remove('dark-theme', 'amoled-theme', 'cream-orange-theme');
+        document.body.classList.remove('dark-theme', 'amoled-theme', 'cream-orange-theme', 'water-color-theme', 'forest-theme');
 
         if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.body.classList.add('dark-theme');
@@ -1156,6 +1156,10 @@ class UIHandler {
             document.body.classList.add('amoled-theme');
         } else if (theme === 'cream-orange') {
             document.body.classList.add('cream-orange-theme');
+        } else if (theme === 'water-color') {
+            document.body.classList.add('water-color-theme');
+        } else if (theme === 'forest') {
+            document.body.classList.add('forest-theme');
         }
 
         // Persist override if explicitly set
