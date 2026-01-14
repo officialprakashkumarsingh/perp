@@ -124,7 +124,31 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('ahamai_custom_instructions', instructions);
     };
 
+    // Queue System
+    const requestQueue = [];
+    let isGenerating = false;
+
+    const processQueue = async () => {
+        if (isGenerating || requestQueue.length === 0) return;
+
+        const nextRequest = requestQueue.shift();
+        uiHandler.updateQueuePanel(requestQueue); // Update UI
+        await handleUserSubmit(nextRequest.query, nextRequest.model, nextRequest.isSearchEnabled, nextRequest.isStudyMode, nextRequest.attachment);
+
+        // Process next after delay to ensure cleanup
+        setTimeout(processQueue, 500);
+    };
+
     const handleUserSubmit = async (query, model, isSearchEnabled, isStudyMode, attachment) => {
+        // Check if busy
+        if (isGenerating) {
+            requestQueue.push({ query, model, isSearchEnabled, isStudyMode, attachment });
+            uiHandler.updateQueuePanel(requestQueue);
+            return;
+        }
+
+        isGenerating = true;
+
         // Ensure we have a chat session
         if (!chatManager.currentChatId) {
             const newChat = chatManager.createChat();
@@ -191,12 +215,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 abortController.abort();
                 uiHandler.setStopMode(false);
                 uiHandler.removeLoading(loadingDiv);
+                isGenerating = false; // Reset flag
                 // Finalize what we have
                 chatManager.addMessageToChat(chatManager.currentChatId, {
                     role: 'assistant',
                     content: finalAnswer + "\n[Stopped by user]",
                     sources: sources
                 });
+                processQueue(); // Check for next
             }
         };
 
@@ -370,7 +396,14 @@ Instructions:
                 sources: sources
             });
         }
+
+        isGenerating = false;
+        processQueue();
     };
+
+    // Use a wrapper to intercept initial submit vs queue calls?
+    // handleUserSubmit now handles the queue check internally if called directly.
+    // However, uiHandler calls it.
 
     uiHandler.init(handleUserSubmit, handleHistoryAction, handleSaveSettings);
 });
