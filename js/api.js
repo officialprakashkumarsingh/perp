@@ -24,19 +24,36 @@ class APIHandler {
         console.log(`Rotated Brave Key to index ${this.currentBraveKeyIndex}`);
     }
 
-    async searchWikipedia(query) {
+    async searchWikipedia(query, deep = false) {
         try {
-            const endpoint = `https://en.wikipedia.org/w/api.php?action=query&list=search&prop=info&inprop=url&utf8=&format=json&origin=*&srlimit=3&srsearch=${encodeURIComponent(query)}`;
+            // Step 1: Search for pages
+            const endpoint = `https://en.wikipedia.org/w/api.php?action=query&list=search&prop=info&inprop=url&utf8=&format=json&origin=*&srlimit=${deep ? 1 : 3}&srsearch=${encodeURIComponent(query)}`;
             const response = await fetch(endpoint);
             if (!response.ok) throw new Error('Wiki Error');
             const data = await response.json();
-            if (!data.query || !data.query.search) return [];
-            return data.query.search.map(result => ({
+            if (!data.query || !data.query.search || data.query.search.length === 0) return [];
+
+            const results = data.query.search.map(result => ({
                 title: result.title,
+                pageid: result.pageid,
                 description: result.snippet.replace(/<[^>]*>/g, ''), // Strip HTML
                 url: `https://en.wikipedia.org/?curid=${result.pageid}`,
                 source: 'Wikipedia'
             }));
+
+            // Step 2: If deep search, fetch full content for the top result
+            if (deep && results.length > 0) {
+                const pageId = results[0].pageid;
+                const contentEndpoint = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&pageids=${pageId}&explaintext=1&format=json&origin=*`;
+                const contentResponse = await fetch(contentEndpoint);
+                const contentData = await contentResponse.json();
+                if (contentData.query && contentData.query.pages && contentData.query.pages[pageId]) {
+                    const extract = contentData.query.pages[pageId].extract;
+                    results[0].fullContent = extract; // Attach full content
+                }
+            }
+
+            return results;
         } catch (e) {
             console.error("Wikipedia Search Error:", e);
             return [];

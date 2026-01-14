@@ -148,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         isGenerating = true;
+        const isWikiEnabled = document.getElementById('wiki-switch') ? document.getElementById('wiki-switch').checked : false;
 
         // Ensure we have a chat session
         if (!chatManager.currentChatId) {
@@ -227,9 +228,28 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            // 1. Search Web (if enabled)
+            // 1. Search Web / Wiki
             let searchContext = "";
-            if (isSearchEnabled && query.trim().length > 0) {
+            let sources = [];
+
+            if (isWikiEnabled && query.trim().length > 0) {
+                try {
+                    // Fetch Deep Wikipedia Content
+                    const wikiResults = await apiHandler.searchWikipedia(query, true); // true for deep search
+                    if (wikiResults && wikiResults.length > 0) {
+                        sources = wikiResults;
+                        uiHandler.renderSources(sourcesDiv, sources);
+
+                        searchContext = `\n\n--- WIKIPEDIA KNOWLEDGE ---\n`;
+                        wikiResults.forEach((result, index) => {
+                            searchContext += `Source [${index + 1}]: ${result.title}\nURL: ${result.url}\nContent: ${result.fullContent || result.description}\n\n`;
+                        });
+                        searchContext += `--- END WIKIPEDIA ---\n\nUse this detailed information to provide a comprehensive answer. Cite sources as [Wiki:Title].`;
+                    }
+                } catch (wikiError) {
+                    console.error("Wiki search failed", wikiError);
+                }
+            } else if (isSearchEnabled && query.trim().length > 0) {
                 try {
                     const searchResults = await apiHandler.searchWeb(query);
                     sources = searchResults;
@@ -264,7 +284,13 @@ Capabilities:
 
 3. **Attachments**: The user may provide text from attached files (PDF, code, text, zip). Use this context to answer questions.
 
-4. **Image Generation**: Image generation is currently disabled. Do not generate images.
+4. **Image Generation**: You can generate images using Pollinations AI.
+   To generate an image, you MUST use this exact Markdown format:
+   \`![Image Description](https://image.pollinations.ai/prompt/{description}?width=768&height=1024&seed={random}&nologo=true)\`
+   Replace \`{description}\` with a URL-encoded detailed prompt for the image.
+   Replace \`{random}\` with a random integer seed (e.g. 12345).
+   Example: \`![A futuristic city](https://image.pollinations.ai/prompt/futuristic%20city%20sunset?width=768&height=1024&seed=54321&nologo=true)\`
+   Do NOT use any other API or format. Generate images when the user explicitly asks or when it adds significant value.
 
 5. **Presentations**: You can generate stylish, themed presentations.
    To do this, output a single HTML block containing multiple \`<div class="slide">\` elements.
@@ -286,9 +312,35 @@ Capabilities:
    Example for google.com: \`![Screenshot of Google](https://s0.wp.com/mshots/v1/https%3A%2F%2Fwww.google.com?w=400&h=800)\`
    Use this when the user asks for a screenshot or visual of a specific web page.
 
+7. **Quizzes**: You can generate interactive quizzes.
+   Output the quiz strictly as a JSON object wrapped in \`[QUIZ_JSON]\` tags.
+   Format:
+   \`[QUIZ_JSON]
+   {
+     "questions": [
+       { "question": "Question text?", "options": ["A", "B", "C", "D"], "answerIndex": 0 },
+       ...
+     ]
+   }
+   [/QUIZ_JSON]\`
+
+8. **Flashcards**: You can generate flashcards.
+   Output the cards strictly as a JSON object wrapped in \`[FLASHCARDS_JSON]\` tags.
+   Format:
+   \`[FLASHCARDS_JSON]
+   {
+     "cards": [
+       { "front": "Term", "back": "Definition" },
+       ...
+     ]
+   }
+   [/FLASHCARDS_JSON]\`
+
 Instructions:
 - If the user asks to "draw" or "visualize" a system, process, or chart, ALWAYS provide a Mermaid diagram.
 - If the user asks for a "presentation" or "slides", generate the HTML slide format described above.
+- If the user asks for a "quiz", generate the JSON quiz format.
+- If the user asks for "flashcards", generate the JSON flashcards format.
 - If you learn something new and specific about the user (e.g., name, profession, preferences), output a memory tag at the end of your response like this: \`[MEMORY: User is a software engineer]\`.
 - Be concise and helpful.
 `;
