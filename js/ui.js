@@ -880,14 +880,14 @@ class UIHandler {
 
     applyTheme(theme) {
         // Simple theme implementation
+        document.body.classList.remove('dark-theme', 'amoled-theme', 'cream-orange-theme');
+
         if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.body.classList.add('dark-theme');
-            document.body.classList.remove('amoled-theme');
         } else if (theme === 'amoled') {
             document.body.classList.add('amoled-theme');
-            document.body.classList.remove('dark-theme');
-        } else {
-            document.body.classList.remove('dark-theme', 'amoled-theme');
+        } else if (theme === 'cream-orange') {
+            document.body.classList.add('cream-orange-theme');
         }
 
         // Persist override if explicitly set

@@ -21,6 +21,24 @@
 /* Incognito Mode - No Theme Change, just logic */
 /* .incognito-mode {} Removed */
 
+/* Cream & Orange Theme */
+body.cream-orange-theme {
+    --bg-color: #FDFCF0;
+    --sidebar-bg: #F9F7EB;
+    --border-color: #E6E0D0;
+    --text-primary: #2C2825;
+    --text-secondary: #6B625B;
+    --accent-color: #FF8C00; /* Dark Orange */
+    --accent-hover: #E67E22;
+    --user-msg-bg: #F2EFE6;
+    --bot-msg-bg: transparent;
+    --input-bg: #FFFDF8;
+}
+
+body.cream-orange-theme .history-item.pinned {
+    background-color: #FFF6E6;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
