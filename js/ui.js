@@ -561,6 +561,28 @@ class UIHandler {
             }
         }
 
+        // Document/PDF Detection
+        if (text.includes('<div class="document-a4"')) {
+             if (!container.querySelector('.document-preview-btn')) {
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'presentation-preview-btn'; // Reuse style
+                previewBtn.style.backgroundColor = '#E74C3C'; // Red for PDF
+                previewBtn.innerHTML = '📄 View Generated PDF';
+                // Extract the specific document content to avoid capturing surrounding text
+                previewBtn.onclick = () => {
+                     const parser = new DOMParser();
+                     const doc = parser.parseFromString(container.innerHTML, 'text/html');
+                     const docContent = doc.querySelector('.document-a4');
+                     if (docContent) {
+                         this.showDocumentPreview(docContent.outerHTML);
+                     } else {
+                         this.showError("Could not load document.");
+                     }
+                };
+                container.insertBefore(previewBtn, container.firstChild);
+            }
+        }
+
         // Code Block Preview
         const codeBlocks = container.querySelectorAll('pre code');
         codeBlocks.forEach(code => {
@@ -921,6 +943,68 @@ class UIHandler {
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2 },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+            };
+            html2pdf().set(opt).from(element).save();
+        };
+    }
+
+    showDocumentPreview(html) {
+        const modal = document.createElement('div');
+        modal.className = 'presentation-modal'; // Reuse presentation modal base
+        modal.innerHTML = `
+            <div class="presentation-controls">
+                <button class="close-pres">Close</button>
+                <button class="export-pres">Download PDF</button>
+            </div>
+            <div class="doc-container" id="doc-root">
+                ${html}
+            </div>
+            <style>
+                .presentation-modal {
+                    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                    background: #525659; /* PDF viewer grey */
+                    z-index: 3000; overflow-y: auto;
+                    display: flex; flex-direction: column; align-items: center;
+                }
+                .presentation-controls {
+                    width: 100%; padding: 1rem; background: #333; color: white;
+                    display: flex; justify-content: flex-end; gap: 1rem; position: sticky; top: 0; z-index: 10;
+                }
+                .doc-container {
+                    padding: 2rem;
+                    display: flex; justify-content: center; width: 100%;
+                }
+                /* A4 Simulation */
+                .document-a4 {
+                    width: 210mm;
+                    min-height: 297mm;
+                    background: white;
+                    color: black;
+                    padding: 20mm;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                    font-size: 12pt;
+                    line-height: 1.5;
+                }
+                @media (max-width: 800px) {
+                    .document-a4 {
+                        width: 95%;
+                        min-height: auto;
+                        padding: 1rem;
+                    }
+                }
+            </style>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('.close-pres').onclick = () => modal.remove();
+        modal.querySelector('.export-pres').onclick = () => {
+             const element = document.getElementById('doc-root').querySelector('.document-a4');
+             const opt = {
+                margin: 0,
+                filename: 'document.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
             html2pdf().set(opt).from(element).save();
         };
