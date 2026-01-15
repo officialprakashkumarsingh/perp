@@ -133,16 +133,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const nextRequest = requestQueue.shift();
         uiHandler.updateQueuePanel(requestQueue); // Update UI
-        await handleUserSubmit(nextRequest.query, nextRequest.model, nextRequest.isSearchEnabled, nextRequest.isStudyMode, nextRequest.attachment);
+        await handleUserSubmit(nextRequest.query, nextRequest.model, nextRequest.isSearchEnabled, nextRequest.isStudyMode, nextRequest.isVisualsMode, nextRequest.attachment);
 
         // Process next after delay to ensure cleanup
         setTimeout(processQueue, 500);
     };
 
-    const handleUserSubmit = async (query, model, isSearchEnabled, isStudyMode, attachment) => {
+    const handleUserSubmit = async (query, model, isSearchEnabled, isStudyMode, isVisualsMode, attachment) => {
         // Check if busy
         if (isGenerating) {
-            requestQueue.push({ query, model, isSearchEnabled, isStudyMode, attachment });
+            requestQueue.push({ query, model, isSearchEnabled, isStudyMode, isVisualsMode, attachment });
             uiHandler.updateQueuePanel(requestQueue);
             return;
         }
@@ -430,6 +430,23 @@ Instructions:
 `;
             }
 
+            // Visuals Mode Logic
+            if (isVisualsMode) {
+                systemPrompt = `Current Date and Time: ${currentDate}. You are in **Visuals Mode**.
+
+GOAL: Your PRIMARY objective is to answer the user's request using VISUAL content (Images, Charts, Diagrams). Text should be minimal and secondary, serving only to explain the visuals.
+
+INSTRUCTIONS:
+1. **Images**: If the user asks about a scene, object, or concept that can be pictured, generate a high-quality AI image using the Pollinations format described above.
+2. **Charts**: If the request involves data, trends, or comparisons, ALWAYS generate a Chart.js chart (\`[CHART_JSON]\`).
+3. **Diagrams**: If the request involves a process, workflow, or structure, ALWAYS generate a Mermaid diagram.
+4. **Layout**: Keep your answer structured like a gallery or dashboard.
+5. **No Fluff**: Do not write long introductions. Go straight to the visual.
+
+Example: If user asks "Apple vs Microsoft stock", immediately output a Chart.js comparison and maybe a Mermaid diagram of their structure. Do NOT write a 3 paragraph essay.
+`;
+            }
+
             // Add Settings (Language, Tone, Custom Instructions)
             const customInstructions = localStorage.getItem('ahamai_custom_instructions');
             const userTone = localStorage.getItem('ahamai_tone') || 'neutral';
@@ -516,7 +533,7 @@ Instructions:
                 if (typeof modifier === 'string') {
                     newQuery = `${query}\n\n[Instruction: Re-write the above response with the following style/modification: ${modifier}]`;
                 }
-                handleUserSubmit(newQuery, model, isSearchEnabled, isStudyMode, attachment);
+                handleUserSubmit(newQuery, model, isSearchEnabled, isStudyMode, isVisualsMode, attachment);
             });
 
         } catch (error) {
@@ -559,6 +576,6 @@ Instructions:
         window.history.replaceState({}, document.title, newUrl);
 
         // Trigger submit
-        handleUserSubmit(queryParam, CONFIG.MODELS[0], true, false, null);
+        handleUserSubmit(queryParam, CONFIG.MODELS[0], true, false, false, null);
     }
 });
