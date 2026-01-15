@@ -103,7 +103,7 @@ body {
 
 .logo {
     font-size: 1.5rem;
-    font-weight: 800;
+    font-weight: 600;
     font-family: var(--logo-font);
     display: flex;
     align-items: center;
@@ -1664,4 +1664,62 @@ body.forest-theme #new-chat-btn:hover {
 body.forest-theme .history-item.pinned {
     background-color: #344C39;
     border-left-color: #8FA893;
+}
+
+/* Rose Theme */
+body.rose-theme {
+    --bg-color: #FCF8F8;
+    --sidebar-bg: #FBEFEF;
+    --border-color: #F9DFDF;
+    --text-primary: #2C2825;
+    --text-secondary: #7A6F6A;
+    --accent-color: #F5AFAF;
+    --accent-hover: #E89E9E;
+    --user-msg-bg: #FBEFEF;
+    --bot-msg-bg: transparent;
+    --input-bg: #FFFFFF;
+}
+
+body.rose-theme .history-item.pinned {
+    background-color: #F9E0E0;
+    border-left: 3px solid var(--accent-color);
+}
+
+/* Notebook Style */
+.notebook-style {
+    background-color: #fff;
+    background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
+    background-size: 100% 1.5rem;
+    padding: 2rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif; /* Fallback for handwritten feel */
+    line-height: 1.5rem;
+    color: #333;
+    position: relative;
+    margin: 1rem 0;
+}
+
+.notebook-style::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 2rem;
+    height: 100%;
+    width: 2px;
+    background-color: #f5a; /* Red margin line */
+}
+
+/* Chart Container */
+.chart-wrapper {
+    position: relative;
+    margin: 1rem 0;
+    height: 300px;
+    width: 100%;
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }

@@ -504,13 +504,13 @@ class UIHandler {
         let cleanText = text;
         let quizDataToRender = null;
         let flashcardsDataToRender = null;
+        let chartDataToRender = null;
 
         // Quiz Detection & Extraction
         const quizMatch = text.match(/\[QUIZ_JSON\]([\s\S]*?)\[\/QUIZ_JSON\]/);
         if (quizMatch) {
             try {
                 quizDataToRender = JSON.parse(quizMatch[1]);
-                // Remove the JSON block from the text to be rendered
                 cleanText = cleanText.replace(quizMatch[0], '');
             } catch (e) {
                 console.error("Quiz JSON parse error", e);
@@ -522,10 +522,20 @@ class UIHandler {
         if (flashMatch) {
             try {
                 flashcardsDataToRender = JSON.parse(flashMatch[1]);
-                // Remove the JSON block from the text to be rendered
                 cleanText = cleanText.replace(flashMatch[0], '');
             } catch (e) {
                 console.error("Flashcards JSON parse error", e);
+            }
+        }
+
+        // Chart Detection & Extraction
+        const chartMatch = text.match(/\[CHART_JSON\]([\s\S]*?)\[\/CHART_JSON\]/);
+        if (chartMatch) {
+             try {
+                chartDataToRender = JSON.parse(chartMatch[1]);
+                cleanText = cleanText.replace(chartMatch[0], '');
+            } catch (e) {
+                console.error("Chart JSON parse error", e);
             }
         }
 
@@ -538,10 +548,8 @@ class UIHandler {
 
         container.innerHTML = markdownHtml;
 
-        // Render Widgets (Append to container so listeners are preserved)
+        // Render Widgets
         if (quizDataToRender) {
-            // Only render if not already there? No, we just wiped innerHTML.
-            // But we must render it now.
             this.renderQuiz(container, quizDataToRender);
         }
 
@@ -549,14 +557,29 @@ class UIHandler {
              this.renderFlashcards(container, flashcardsDataToRender);
         }
 
+        if (chartDataToRender) {
+            this.renderChart(container, chartDataToRender);
+        }
+
         // Presentation Detection
         if (text.includes('<div class="slide">')) {
-            // Check if preview button exists (it won't because we wiped innerHTML, so we add it)
             if (!container.querySelector('.presentation-preview-btn')) {
                 const previewBtn = document.createElement('button');
                 previewBtn.className = 'presentation-preview-btn';
                 previewBtn.innerHTML = '🎬 Preview Presentation';
                 previewBtn.onclick = () => this.showPresentationPreview(text);
+                container.insertBefore(previewBtn, container.firstChild);
+            }
+        }
+
+        // Notebook Preview
+        if (text.includes('<div class="notebook-style">')) {
+            if (!container.querySelector('.notebook-preview-btn')) {
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'presentation-preview-btn'; // Reuse style
+                previewBtn.style.backgroundColor = '#F5AFAF';
+                previewBtn.innerHTML = '📝 Preview Notes';
+                previewBtn.onclick = () => this.showNotebookPreview(text);
                 container.insertBefore(previewBtn, container.firstChild);
             }
         }
@@ -840,6 +863,26 @@ class UIHandler {
         renderCard();
     }
 
+    renderChart(container, chartData) {
+        if (typeof Chart === 'undefined') {
+            container.insertAdjacentHTML('beforeend', '<div style="color:red">Chart.js library not loaded.</div>');
+            return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'chart-wrapper';
+        const canvas = document.createElement('canvas');
+        wrapper.appendChild(canvas);
+        container.appendChild(wrapper);
+
+        try {
+            new Chart(canvas, chartData);
+        } catch(e) {
+            console.error("Error creating chart", e);
+            wrapper.innerHTML = "Error creating chart";
+        }
+    }
+
     renderLatexManual(container) {
         const walk = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
         let node;
@@ -943,6 +986,80 @@ class UIHandler {
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2 },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+            };
+            html2pdf().set(opt).from(element).save();
+        };
+    }
+
+    showNotebookPreview(html) {
+        const modal = document.createElement('div');
+        modal.className = 'presentation-modal';
+        modal.innerHTML = `
+            <div class="presentation-controls">
+                <button class="close-pres">Close</button>
+                <button class="export-pres">Download PDF</button>
+            </div>
+            <div class="doc-container" id="note-root">
+                ${html}
+            </div>
+            <style>
+                .presentation-modal {
+                    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                    background: #525659;
+                    z-index: 3000; overflow-y: auto;
+                    display: flex; flex-direction: column; align-items: center;
+                }
+                .presentation-controls {
+                    width: 100%; padding: 1rem; background: #333; color: white;
+                    display: flex; justify-content: flex-end; gap: 1rem; position: sticky; top: 0; z-index: 10;
+                }
+                .doc-container {
+                    padding: 2rem;
+                    display: flex; justify-content: center; width: 100%;
+                }
+                .notebook-style {
+                    width: 210mm;
+                    min-height: 297mm;
+                    background-color: #fff;
+                    background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
+                    background-size: 100% 1.5rem;
+                    padding: 3rem;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                    font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+                    line-height: 1.5rem;
+                    color: #333;
+                    position: relative;
+                }
+                .notebook-style::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 2.5rem;
+                    height: 100%;
+                    width: 2px;
+                    background-color: #f5a;
+                }
+                @media (max-width: 800px) {
+                    .notebook-style {
+                        width: 95%;
+                        min-height: auto;
+                        padding: 1rem;
+                        padding-left: 3rem;
+                    }
+                }
+            </style>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('.close-pres').onclick = () => modal.remove();
+        modal.querySelector('.export-pres').onclick = () => {
+             const element = document.getElementById('note-root').querySelector('.notebook-style');
+             const opt = {
+                margin: 0,
+                filename: 'notes.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
             html2pdf().set(opt).from(element).save();
         };
@@ -1232,7 +1349,7 @@ class UIHandler {
 
     applyTheme(theme) {
         // Simple theme implementation
-        document.body.classList.remove('dark-theme', 'amoled-theme', 'cream-orange-theme', 'water-color-theme', 'forest-theme');
+        document.body.classList.remove('dark-theme', 'amoled-theme', 'cream-orange-theme', 'water-color-theme', 'forest-theme', 'rose-theme');
 
         if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.body.classList.add('dark-theme');
@@ -1244,6 +1361,8 @@ class UIHandler {
             document.body.classList.add('water-color-theme');
         } else if (theme === 'forest') {
             document.body.classList.add('forest-theme');
+        } else if (theme === 'rose') {
+            document.body.classList.add('rose-theme');
         }
 
         // Persist override if explicitly set
