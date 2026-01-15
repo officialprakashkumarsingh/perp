@@ -35,6 +35,10 @@ class UIHandler {
         const savedTheme = localStorage.getItem('ahamai_theme') || 'system';
         this.applyTheme(savedTheme);
 
+        // Initialize Font Size
+        const savedFontSize = localStorage.getItem('ahamai_font_size') || 'medium';
+        this.applyFontSize(savedFontSize);
+
         // Create file input hidden
         this.fileInput = document.createElement('input');
         this.fileInput.type = 'file';
@@ -180,6 +184,10 @@ class UIHandler {
             // Real-time Settings Listeners (Auto-save/Apply)
             document.getElementById('theme-select').addEventListener('change', (e) => {
                 this.applyTheme(e.target.value);
+            });
+
+            document.getElementById('font-size-select').addEventListener('change', (e) => {
+                this.applyFontSize(e.target.value);
             });
 
             // Data Controls
@@ -428,34 +436,34 @@ class UIHandler {
         // Copy Button
         const copyBtn = document.createElement('button');
         copyBtn.className = 'action-btn';
-        copyBtn.innerHTML = this.getIcon('copy') + ' Copy';
+        copyBtn.innerHTML = this.getIcon('copy') + ' <span class="btn-text">Copy</span>';
         copyBtn.onclick = () => {
             const text = contentDiv.innerText;
             navigator.clipboard.writeText(text).then(() => {
-                copyBtn.innerHTML = '✅ Copied';
-                setTimeout(() => copyBtn.innerHTML = this.getIcon('copy') + ' Copy', 2000);
+                copyBtn.innerHTML = '✅ <span class="btn-text">Copied</span>';
+                setTimeout(() => copyBtn.innerHTML = this.getIcon('copy') + ' <span class="btn-text">Copy</span>', 2000);
             });
         };
 
         // Speak Button
         const speakBtn = document.createElement('button');
         speakBtn.className = 'action-btn';
-        speakBtn.innerHTML = '🗣️ Speak';
+        speakBtn.innerHTML = '🗣️ <span class="btn-text">Speak</span>';
         let isSpeaking = false;
         speakBtn.onclick = () => {
              if (isSpeaking) {
                  window.speechSynthesis.cancel();
-                 speakBtn.innerHTML = '🗣️ Speak';
+                 speakBtn.innerHTML = '🗣️ <span class="btn-text">Speak</span>';
                  isSpeaking = false;
              } else {
                  const text = contentDiv.innerText;
                  const utterance = new SpeechSynthesisUtterance(text);
                  utterance.onend = () => {
-                     speakBtn.innerHTML = '🗣️ Speak';
+                     speakBtn.innerHTML = '🗣️ <span class="btn-text">Speak</span>';
                      isSpeaking = false;
                  };
                  window.speechSynthesis.speak(utterance);
-                 speakBtn.innerHTML = '⏹️ Stop';
+                 speakBtn.innerHTML = '⏹️ <span class="btn-text">Stop</span>';
                  isSpeaking = true;
              }
         };
@@ -463,19 +471,19 @@ class UIHandler {
         // Regenerate Button
         const regenBtn = document.createElement('button');
         regenBtn.className = 'action-btn';
-        regenBtn.innerHTML = this.getIcon('refresh') + ' Regenerate';
+        regenBtn.innerHTML = this.getIcon('refresh') + ' <span class="btn-text">Regenerate</span>';
         regenBtn.onclick = onRegenerate;
 
         // Modify Button
         const modifyBtn = document.createElement('button');
         modifyBtn.className = 'action-btn';
-        modifyBtn.innerHTML = '✏️ Modify';
+        modifyBtn.innerHTML = '✏️ <span class="btn-text">Modify</span>';
         modifyBtn.onclick = (e) => this.showModifyOptions(e, onRegenerate);
 
         // Export PDF Button
         const pdfBtn = document.createElement('button');
         pdfBtn.className = 'action-btn';
-        pdfBtn.innerHTML = this.getIcon('download') + ' Export PDF';
+        pdfBtn.innerHTML = this.getIcon('download') + ' <span class="btn-text">Export PDF</span>';
         pdfBtn.onclick = () => this.exportMessageToPDF(contentDiv);
 
         actionsDiv.appendChild(copyBtn);
@@ -972,19 +980,24 @@ class UIHandler {
     showModifyOptions(event, onRegenerate) {
         // Create popup
         const popup = document.createElement('div');
-        popup.className = 'extension-sheet open'; // Reuse sheet style
-        popup.style.position = 'absolute';
-        popup.style.bottom = 'auto';
-        popup.style.left = 'auto';
-        popup.style.top = (event.target.offsetTop + 30) + 'px';
-        popup.style.right = '20px';
-        popup.style.width = '200px';
-        popup.style.zIndex = '1000';
+        popup.className = 'modify-popup';
+
+        // Desktop positioning (Mobile handled by CSS fixed position)
+        if (window.innerWidth > 600) {
+            popup.style.position = 'absolute';
+            popup.style.top = (event.target.offsetTop + 35) + 'px';
+            popup.style.left = event.target.offsetLeft + 'px';
+        }
 
         const options = [
             "Shorter", "Longer", "Professional", "Casual",
             "Simple (ELI5)", "Detailed", "Bullet Points",
-            "Table Format", "Socratic Mode", "Critique"
+            "Table Format", "Socratic Mode", "Critique",
+            "Summarize", "Expand", "Fix Grammar",
+            "Translate to Spanish", "Translate to French", "Translate to Hindi",
+            "Code Only", "Explain Code", "Debug",
+            "Academic Tone", "Creative Writing", "Poem",
+            "Story", "Tweet Style", "Email Format"
         ];
 
         options.forEach(opt => {
@@ -1009,7 +1022,10 @@ class UIHandler {
 
         // Find parent to append to (message actions container)
         event.target.parentElement.appendChild(popup);
-        event.target.parentElement.style.position = 'relative';
+        // Ensure parent has relative positioning for absolute child
+        if (window.getComputedStyle(event.target.parentElement).position === 'static') {
+            event.target.parentElement.style.position = 'relative';
+        }
     }
 
     showPresentationPreview(html) {
@@ -1404,6 +1420,7 @@ class UIHandler {
 
     loadSettings() {
         document.getElementById('theme-select').value = localStorage.getItem('ahamai_theme') || 'system';
+        document.getElementById('font-size-select').value = localStorage.getItem('ahamai_font_size') || 'medium';
         document.getElementById('language-select').value = localStorage.getItem('ahamai_language') || 'en';
         document.getElementById('custom-instructions').value = localStorage.getItem('ahamai_custom_instructions') || '';
         document.getElementById('tone-select').value = localStorage.getItem('ahamai_tone') || 'neutral';
@@ -1411,6 +1428,7 @@ class UIHandler {
 
     saveSettings() {
         const theme = document.getElementById('theme-select').value;
+        // Font size saved in real-time
         const language = document.getElementById('language-select').value;
         const instructions = document.getElementById('custom-instructions').value;
         const tone = document.getElementById('tone-select').value;
@@ -1456,5 +1474,11 @@ class UIHandler {
             'incognito': '<span class="incognito-emoji">🤫</span>'
         };
         return icons[name] || '';
+    }
+
+    applyFontSize(size) {
+        document.body.classList.remove('font-small', 'font-medium', 'font-large');
+        document.body.classList.add(`font-${size}`);
+        localStorage.setItem('ahamai_font_size', size);
     }
 }
