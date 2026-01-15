@@ -88,15 +88,6 @@ class UIHandler {
         const studySwitch = document.getElementById('study-switch');
         studySwitch.addEventListener('change', () => this.updateExtensionIconState());
 
-        // Visuals Toggle
-        const visualsSwitch = document.getElementById('visuals-switch');
-        if (visualsSwitch) {
-            visualsSwitch.addEventListener('change', () => {
-                this.updateExtensionIconState();
-                this.toggleVisualsMode(visualsSwitch.checked);
-            });
-        }
-
         // Wiki Toggle
         const wikiSwitch = document.getElementById('wiki-switch');
         if (wikiSwitch) {
@@ -274,7 +265,6 @@ class UIHandler {
         const model = this.modelSelect.value;
         const isSearchEnabled = document.getElementById('search-switch').checked;
         const isStudyMode = document.getElementById('study-switch').checked;
-        const isVisualsMode = document.getElementById('visuals-switch') ? document.getElementById('visuals-switch').checked : false;
         const attachment = this.currentAttachment;
 
         this.userInput.value = '';
@@ -287,12 +277,7 @@ class UIHandler {
         // Hide welcome screen
         this.welcomeScreen.style.display = 'none';
 
-        // Start Timer for Labs Stats
-        if (isVisualsMode) {
-            this.startLabsTimer();
-        }
-
-        onSubmit(text, model, isSearchEnabled, isStudyMode, isVisualsMode, attachment);
+        onSubmit(text, model, isSearchEnabled, isStudyMode, attachment);
     }
 
     setStopMode(isStop) {
@@ -361,45 +346,13 @@ class UIHandler {
         const extBtn = document.getElementById('extension-btn');
         const isSearch = document.getElementById('search-switch').checked;
         const isStudy = document.getElementById('study-switch').checked;
-        const isVisuals = document.getElementById('visuals-switch') ? document.getElementById('visuals-switch').checked : false;
         const isWiki = document.getElementById('wiki-switch') ? document.getElementById('wiki-switch').checked : false;
         const hasFile = !!this.currentAttachment;
 
-        if (isSearch || isStudy || hasFile || isWiki || isVisuals) {
+        if (isSearch || isStudy || hasFile || isWiki) {
             extBtn.classList.add('active-dot');
         } else {
             extBtn.classList.remove('active-dot');
-        }
-    }
-
-    toggleVisualsMode(active) {
-        if (active) {
-            document.body.classList.add('visuals-mode');
-            const stats = document.getElementById('labs-stats');
-            if (stats) stats.classList.remove('hidden');
-        } else {
-            document.body.classList.remove('visuals-mode');
-            const stats = document.getElementById('labs-stats');
-            if (stats) stats.classList.add('hidden');
-            this.stopLabsTimer();
-        }
-    }
-
-    startLabsTimer() {
-        const timeDisplay = document.getElementById('labs-time');
-        if (!timeDisplay) return;
-
-        const startTime = Date.now();
-        this.labsTimer = setInterval(() => {
-            const elapsed = (Date.now() - startTime) / 1000;
-            timeDisplay.textContent = elapsed.toFixed(2) + 's';
-        }, 100);
-    }
-
-    stopLabsTimer() {
-        if (this.labsTimer) {
-            clearInterval(this.labsTimer);
-            this.labsTimer = null;
         }
     }
 
@@ -783,6 +736,25 @@ class UIHandler {
         container.querySelectorAll('a').forEach(link => {
             link.setAttribute('target', '_blank');
             link.setAttribute('rel', 'noopener noreferrer');
+        });
+
+        // Handle Image Grids
+        // If markdown rendered raw HTML for grid, we ensure it's styled
+        // Styles are in CSS or inline
+        // Add specific class handling if needed
+        const grids = container.querySelectorAll('.image-grid');
+        grids.forEach(grid => {
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(150px, 1fr))';
+            grid.style.gap = '10px';
+            grid.style.margin = '1rem 0';
+        });
+
+        container.querySelectorAll('.image-grid img').forEach(img => {
+            img.style.width = '100%';
+            img.style.borderRadius = '8px';
+            img.style.objectFit = 'cover';
+            img.style.aspectRatio = '1/1';
         });
 
         this.scrollToBottom();

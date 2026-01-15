@@ -272,4 +272,37 @@ class APIHandler {
         }
     }
 
+    async generateImage(prompt, n = 1) {
+        try {
+            const response = await fetch(CONFIG.INFIP_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${CONFIG.INFIP_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: "img3",
+                    prompt: prompt,
+                    n: parseInt(n) || 1,
+                    size: "1024x1024",
+                    response_format: "url"
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Image API Error: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            // Data format check based on OpenAI compatibility: { created: ..., data: [ { url: "..." } ] }
+            if (data.data && Array.isArray(data.data)) {
+                return data.data.map(item => item.url);
+            }
+            throw new Error("Invalid response format from Image API");
+        } catch (e) {
+            console.error("Image generation failed:", e);
+            throw e;
+        }
+    }
 }

@@ -63,5 +63,8 @@ const CONFIG = {
     ],
     BRAVE_SEARCH_URL: 'https://api.search.brave.com/res/v1/web/search',
     CEREBRAS_API_URL: 'https://api.cerebras.ai/v1/chat/completions',
-    POLLINATIONS_API_KEY: 'sk_IEZbgKtGzdMBHPzIA7I9zJxVTSlBB9os'
+
+    // Infip API for Image Generation
+    INFIP_API_KEY: 'infip-cba757f3',
+    INFIP_API_URL: 'https://api.infip.pro/v1/images/generations'
 };
