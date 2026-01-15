@@ -1453,7 +1453,7 @@ class UIHandler {
             'trash': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
             'incognito': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path><circle cx="12" cy="12" r="10"></circle><path d="M3 10h18"></path></svg>', // Fallback placeholder
             // Better Incognito Icon (Mask/Glasses)
-            'incognito': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 10 10v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a10 10 0 0 1 10-10z"></path><circle cx="8" cy="14" r="2"></circle><circle cx="16" cy="14" r="2"></circle><path d="M12 14v4"></path></svg>'
+            'incognito': '<span class="incognito-emoji">🤫</span>'
         };
         return icons[name] || '';
     }
