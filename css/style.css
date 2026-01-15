@@ -1699,6 +1699,15 @@ body.rose-theme .history-item.pinned {
     color: #333;
     position: relative;
     margin: 1rem 0;
+    overflow-x: auto; /* Handle wide content */
+    max-width: 100%;
+}
+
+.notebook-style table,
+.notebook-style img,
+.notebook-style pre {
+    max-width: 100%;
+    height: auto;
 }
 
 .notebook-style::before {

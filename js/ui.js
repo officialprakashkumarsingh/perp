@@ -365,13 +365,13 @@ class UIHandler {
 
         const copyBtn = document.createElement('button');
         copyBtn.className = 'user-action-btn';
-        copyBtn.innerHTML = this.getIcon('copy');
+        copyBtn.innerHTML = this.getIcon('copy') + ' Copy';
         copyBtn.title = 'Copy';
         copyBtn.onclick = () => navigator.clipboard.writeText(text);
 
         const editBtn = document.createElement('button');
         editBtn.className = 'user-action-btn';
-        editBtn.innerHTML = this.getIcon('edit');
+        editBtn.innerHTML = this.getIcon('edit') + ' Edit';
         editBtn.title = 'Edit';
         editBtn.onclick = () => {
             this.userInput.value = text;
@@ -437,11 +437,40 @@ class UIHandler {
             });
         };
 
+        // Speak Button
+        const speakBtn = document.createElement('button');
+        speakBtn.className = 'action-btn';
+        speakBtn.innerHTML = '🗣️ Speak';
+        let isSpeaking = false;
+        speakBtn.onclick = () => {
+             if (isSpeaking) {
+                 window.speechSynthesis.cancel();
+                 speakBtn.innerHTML = '🗣️ Speak';
+                 isSpeaking = false;
+             } else {
+                 const text = contentDiv.innerText;
+                 const utterance = new SpeechSynthesisUtterance(text);
+                 utterance.onend = () => {
+                     speakBtn.innerHTML = '🗣️ Speak';
+                     isSpeaking = false;
+                 };
+                 window.speechSynthesis.speak(utterance);
+                 speakBtn.innerHTML = '⏹️ Stop';
+                 isSpeaking = true;
+             }
+        };
+
         // Regenerate Button
         const regenBtn = document.createElement('button');
         regenBtn.className = 'action-btn';
         regenBtn.innerHTML = this.getIcon('refresh') + ' Regenerate';
         regenBtn.onclick = onRegenerate;
+
+        // Modify Button
+        const modifyBtn = document.createElement('button');
+        modifyBtn.className = 'action-btn';
+        modifyBtn.innerHTML = '✏️ Modify';
+        modifyBtn.onclick = (e) => this.showModifyOptions(e, onRegenerate);
 
         // Export PDF Button
         const pdfBtn = document.createElement('button');
@@ -450,7 +479,9 @@ class UIHandler {
         pdfBtn.onclick = () => this.exportMessageToPDF(contentDiv);
 
         actionsDiv.appendChild(copyBtn);
+        actionsDiv.appendChild(speakBtn);
         actionsDiv.appendChild(regenBtn);
+        actionsDiv.appendChild(modifyBtn);
         actionsDiv.appendChild(pdfBtn);
 
         this.scrollToBottom();
@@ -938,6 +969,49 @@ class UIHandler {
         this.messagesList.appendChild(div);
     }
 
+    showModifyOptions(event, onRegenerate) {
+        // Create popup
+        const popup = document.createElement('div');
+        popup.className = 'extension-sheet open'; // Reuse sheet style
+        popup.style.position = 'absolute';
+        popup.style.bottom = 'auto';
+        popup.style.left = 'auto';
+        popup.style.top = (event.target.offsetTop + 30) + 'px';
+        popup.style.right = '20px';
+        popup.style.width = '200px';
+        popup.style.zIndex = '1000';
+
+        const options = [
+            "Shorter", "Longer", "Professional", "Casual",
+            "Simple (ELI5)", "Detailed", "Bullet Points",
+            "Table Format", "Socratic Mode", "Critique"
+        ];
+
+        options.forEach(opt => {
+            const item = document.createElement('div');
+            item.className = 'extension-item';
+            item.textContent = opt;
+            item.onclick = () => {
+                onRegenerate(opt);
+                popup.remove();
+            };
+            popup.appendChild(item);
+        });
+
+        // Close on click outside
+        const closeHandler = (e) => {
+            if (!popup.contains(e.target) && e.target !== event.target) {
+                popup.remove();
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeHandler), 0);
+
+        // Find parent to append to (message actions container)
+        event.target.parentElement.appendChild(popup);
+        event.target.parentElement.style.position = 'relative';
+    }
+
     showPresentationPreview(html) {
         const modal = document.createElement('div');
         modal.className = 'presentation-modal';
@@ -1377,7 +1451,9 @@ class UIHandler {
             'download': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
             'pin': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>',
             'trash': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-            'incognito': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"></path><path d="M9.5 12c0 2.2-1.8 4-4 4s-4-1.8-4-4"></path><path d="M14.5 12c0 2.2 1.8 4 4 4s4-1.8 4-4"></path><path d="M12 12v-3"></path><path d="M12 9c-3 0-4-3-4-3h8s-1 3-4 3z"></path></svg>'
+            'incognito': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path><circle cx="12" cy="12" r="10"></circle><path d="M3 10h18"></path></svg>', // Fallback placeholder
+            // Better Incognito Icon (Mask/Glasses)
+            'incognito': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 10 10v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a10 10 0 0 1 10-10z"></path><circle cx="8" cy="14" r="2"></circle><circle cx="16" cy="14" r="2"></circle><path d="M12 14v4"></path></svg>'
         };
         return icons[name] || '';
     }

@@ -510,9 +510,13 @@ Instructions:
             uiHandler.setStopMode(false);
 
             // Show Actions (Copy, Regenerate, Export)
-            uiHandler.addMessageActions(actionsDiv, contentDiv, () => {
+            uiHandler.addMessageActions(actionsDiv, contentDiv, (modifier) => {
                 // Regenerate logic: Call submit with same query
-                handleUserSubmit(query, model, isSearchEnabled, isStudyMode, attachment);
+                let newQuery = query;
+                if (typeof modifier === 'string') {
+                    newQuery = `${query}\n\n[Instruction: Re-write the above response with the following style/modification: ${modifier}]`;
+                }
+                handleUserSubmit(newQuery, model, isSearchEnabled, isStudyMode, attachment);
             });
 
         } catch (error) {
