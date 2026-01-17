@@ -35,6 +35,10 @@ class UIHandler {
         const savedTheme = localStorage.getItem('ahamai_theme') || 'system';
         this.applyTheme(savedTheme);
 
+        // Initialize Font Size
+        const savedFontSize = localStorage.getItem('ahamai_font_size') || 'medium';
+        this.applyFontSize(savedFontSize);
+
         // Create file input hidden
         this.fileInput = document.createElement('input');
         this.fileInput.type = 'file';
@@ -180,6 +184,10 @@ class UIHandler {
             // Real-time Settings Listeners (Auto-save/Apply)
             document.getElementById('theme-select').addEventListener('change', (e) => {
                 this.applyTheme(e.target.value);
+            });
+
+            document.getElementById('font-size-select').addEventListener('change', (e) => {
+                this.applyFontSize(e.target.value);
             });
 
             // Data Controls
@@ -365,13 +373,13 @@ class UIHandler {
 
         const copyBtn = document.createElement('button');
         copyBtn.className = 'user-action-btn';
-        copyBtn.innerHTML = this.getIcon('copy');
+        copyBtn.innerHTML = this.getIcon('copy') + ' Copy';
         copyBtn.title = 'Copy';
         copyBtn.onclick = () => navigator.clipboard.writeText(text);
 
         const editBtn = document.createElement('button');
         editBtn.className = 'user-action-btn';
-        editBtn.innerHTML = this.getIcon('edit');
+        editBtn.innerHTML = this.getIcon('edit') + ' Edit';
         editBtn.title = 'Edit';
         editBtn.onclick = () => {
             this.userInput.value = text;
@@ -428,29 +436,60 @@ class UIHandler {
         // Copy Button
         const copyBtn = document.createElement('button');
         copyBtn.className = 'action-btn';
-        copyBtn.innerHTML = this.getIcon('copy') + ' Copy';
+        copyBtn.innerHTML = this.getIcon('copy') + ' <span class="btn-text">Copy</span>';
         copyBtn.onclick = () => {
             const text = contentDiv.innerText;
             navigator.clipboard.writeText(text).then(() => {
-                copyBtn.innerHTML = '✅ Copied';
-                setTimeout(() => copyBtn.innerHTML = this.getIcon('copy') + ' Copy', 2000);
+                copyBtn.innerHTML = '✅ <span class="btn-text">Copied</span>';
+                setTimeout(() => copyBtn.innerHTML = this.getIcon('copy') + ' <span class="btn-text">Copy</span>', 2000);
             });
+        };
+
+        // Speak Button
+        const speakBtn = document.createElement('button');
+        speakBtn.className = 'action-btn';
+        speakBtn.innerHTML = '🗣️ <span class="btn-text">Speak</span>';
+        let isSpeaking = false;
+        speakBtn.onclick = () => {
+             if (isSpeaking) {
+                 window.speechSynthesis.cancel();
+                 speakBtn.innerHTML = '🗣️ <span class="btn-text">Speak</span>';
+                 isSpeaking = false;
+             } else {
+                 const text = contentDiv.innerText;
+                 const utterance = new SpeechSynthesisUtterance(text);
+                 utterance.onend = () => {
+                     speakBtn.innerHTML = '🗣️ <span class="btn-text">Speak</span>';
+                     isSpeaking = false;
+                 };
+                 window.speechSynthesis.speak(utterance);
+                 speakBtn.innerHTML = '⏹️ <span class="btn-text">Stop</span>';
+                 isSpeaking = true;
+             }
         };
 
         // Regenerate Button
         const regenBtn = document.createElement('button');
         regenBtn.className = 'action-btn';
-        regenBtn.innerHTML = this.getIcon('refresh') + ' Regenerate';
+        regenBtn.innerHTML = this.getIcon('refresh') + ' <span class="btn-text">Regenerate</span>';
         regenBtn.onclick = onRegenerate;
+
+        // Modify Button
+        const modifyBtn = document.createElement('button');
+        modifyBtn.className = 'action-btn';
+        modifyBtn.innerHTML = '✏️ <span class="btn-text">Modify</span>';
+        modifyBtn.onclick = (e) => this.showModifyOptions(e, onRegenerate);
 
         // Export PDF Button
         const pdfBtn = document.createElement('button');
         pdfBtn.className = 'action-btn';
-        pdfBtn.innerHTML = this.getIcon('download') + ' Export PDF';
+        pdfBtn.innerHTML = this.getIcon('download') + ' <span class="btn-text">Export PDF</span>';
         pdfBtn.onclick = () => this.exportMessageToPDF(contentDiv);
 
         actionsDiv.appendChild(copyBtn);
+        actionsDiv.appendChild(speakBtn);
         actionsDiv.appendChild(regenBtn);
+        actionsDiv.appendChild(modifyBtn);
         actionsDiv.appendChild(pdfBtn);
 
         this.scrollToBottom();
@@ -504,13 +543,13 @@ class UIHandler {
         let cleanText = text;
         let quizDataToRender = null;
         let flashcardsDataToRender = null;
+        let chartDataToRender = null;
 
         // Quiz Detection & Extraction
         const quizMatch = text.match(/\[QUIZ_JSON\]([\s\S]*?)\[\/QUIZ_JSON\]/);
         if (quizMatch) {
             try {
                 quizDataToRender = JSON.parse(quizMatch[1]);
-                // Remove the JSON block from the text to be rendered
                 cleanText = cleanText.replace(quizMatch[0], '');
             } catch (e) {
                 console.error("Quiz JSON parse error", e);
@@ -522,10 +561,20 @@ class UIHandler {
         if (flashMatch) {
             try {
                 flashcardsDataToRender = JSON.parse(flashMatch[1]);
-                // Remove the JSON block from the text to be rendered
                 cleanText = cleanText.replace(flashMatch[0], '');
             } catch (e) {
                 console.error("Flashcards JSON parse error", e);
+            }
+        }
+
+        // Chart Detection & Extraction
+        const chartMatch = text.match(/\[CHART_JSON\]([\s\S]*?)\[\/CHART_JSON\]/);
+        if (chartMatch) {
+             try {
+                chartDataToRender = JSON.parse(chartMatch[1]);
+                cleanText = cleanText.replace(chartMatch[0], '');
+            } catch (e) {
+                console.error("Chart JSON parse error", e);
             }
         }
 
@@ -538,10 +587,8 @@ class UIHandler {
 
         container.innerHTML = markdownHtml;
 
-        // Render Widgets (Append to container so listeners are preserved)
+        // Render Widgets
         if (quizDataToRender) {
-            // Only render if not already there? No, we just wiped innerHTML.
-            // But we must render it now.
             this.renderQuiz(container, quizDataToRender);
         }
 
@@ -549,14 +596,29 @@ class UIHandler {
              this.renderFlashcards(container, flashcardsDataToRender);
         }
 
+        if (chartDataToRender) {
+            this.renderChart(container, chartDataToRender);
+        }
+
         // Presentation Detection
         if (text.includes('<div class="slide">')) {
-            // Check if preview button exists (it won't because we wiped innerHTML, so we add it)
             if (!container.querySelector('.presentation-preview-btn')) {
                 const previewBtn = document.createElement('button');
                 previewBtn.className = 'presentation-preview-btn';
                 previewBtn.innerHTML = '🎬 Preview Presentation';
                 previewBtn.onclick = () => this.showPresentationPreview(text);
+                container.insertBefore(previewBtn, container.firstChild);
+            }
+        }
+
+        // Notebook Preview
+        if (text.includes('<div class="notebook-style">')) {
+            if (!container.querySelector('.notebook-preview-btn')) {
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'presentation-preview-btn'; // Reuse style
+                previewBtn.style.backgroundColor = '#F5AFAF';
+                previewBtn.innerHTML = '📝 Preview Notes';
+                previewBtn.onclick = () => this.showNotebookPreview(text);
                 container.insertBefore(previewBtn, container.firstChild);
             }
         }
@@ -674,6 +736,25 @@ class UIHandler {
         container.querySelectorAll('a').forEach(link => {
             link.setAttribute('target', '_blank');
             link.setAttribute('rel', 'noopener noreferrer');
+        });
+
+        // Handle Image Grids
+        // If markdown rendered raw HTML for grid, we ensure it's styled
+        // Styles are in CSS or inline
+        // Add specific class handling if needed
+        const grids = container.querySelectorAll('.image-grid');
+        grids.forEach(grid => {
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(150px, 1fr))';
+            grid.style.gap = '10px';
+            grid.style.margin = '1rem 0';
+        });
+
+        container.querySelectorAll('.image-grid img').forEach(img => {
+            img.style.width = '100%';
+            img.style.borderRadius = '8px';
+            img.style.objectFit = 'cover';
+            img.style.aspectRatio = '1/1';
         });
 
         this.scrollToBottom();
@@ -840,6 +921,26 @@ class UIHandler {
         renderCard();
     }
 
+    renderChart(container, chartData) {
+        if (typeof Chart === 'undefined') {
+            container.insertAdjacentHTML('beforeend', '<div style="color:red">Chart.js library not loaded.</div>');
+            return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'chart-wrapper';
+        const canvas = document.createElement('canvas');
+        wrapper.appendChild(canvas);
+        container.appendChild(wrapper);
+
+        try {
+            new Chart(canvas, chartData);
+        } catch(e) {
+            console.error("Error creating chart", e);
+            wrapper.innerHTML = "Error creating chart";
+        }
+    }
+
     renderLatexManual(container) {
         const walk = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
         let node;
@@ -895,6 +996,57 @@ class UIHandler {
         this.messagesList.appendChild(div);
     }
 
+    showModifyOptions(event, onRegenerate) {
+        // Create popup
+        const popup = document.createElement('div');
+        popup.className = 'modify-popup';
+
+        // Desktop positioning (Mobile handled by CSS fixed position)
+        if (window.innerWidth > 600) {
+            popup.style.position = 'absolute';
+            popup.style.top = (event.target.offsetTop + 35) + 'px';
+            popup.style.left = event.target.offsetLeft + 'px';
+        }
+
+        const options = [
+            "Shorter", "Longer", "Professional", "Casual",
+            "Simple (ELI5)", "Detailed", "Bullet Points",
+            "Table Format", "Socratic Mode", "Critique",
+            "Summarize", "Expand", "Fix Grammar",
+            "Translate to Spanish", "Translate to French", "Translate to Hindi",
+            "Code Only", "Explain Code", "Debug",
+            "Academic Tone", "Creative Writing", "Poem",
+            "Story", "Tweet Style", "Email Format"
+        ];
+
+        options.forEach(opt => {
+            const item = document.createElement('div');
+            item.className = 'extension-item';
+            item.textContent = opt;
+            item.onclick = () => {
+                onRegenerate(opt);
+                popup.remove();
+            };
+            popup.appendChild(item);
+        });
+
+        // Close on click outside
+        const closeHandler = (e) => {
+            if (!popup.contains(e.target) && e.target !== event.target) {
+                popup.remove();
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeHandler), 0);
+
+        // Find parent to append to (message actions container)
+        event.target.parentElement.appendChild(popup);
+        // Ensure parent has relative positioning for absolute child
+        if (window.getComputedStyle(event.target.parentElement).position === 'static') {
+            event.target.parentElement.style.position = 'relative';
+        }
+    }
+
     showPresentationPreview(html) {
         const modal = document.createElement('div');
         modal.className = 'presentation-modal';
@@ -943,6 +1095,80 @@ class UIHandler {
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2 },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+            };
+            html2pdf().set(opt).from(element).save();
+        };
+    }
+
+    showNotebookPreview(html) {
+        const modal = document.createElement('div');
+        modal.className = 'presentation-modal';
+        modal.innerHTML = `
+            <div class="presentation-controls">
+                <button class="close-pres">Close</button>
+                <button class="export-pres">Download PDF</button>
+            </div>
+            <div class="doc-container" id="note-root">
+                ${html}
+            </div>
+            <style>
+                .presentation-modal {
+                    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                    background: #525659;
+                    z-index: 3000; overflow-y: auto;
+                    display: flex; flex-direction: column; align-items: center;
+                }
+                .presentation-controls {
+                    width: 100%; padding: 1rem; background: #333; color: white;
+                    display: flex; justify-content: flex-end; gap: 1rem; position: sticky; top: 0; z-index: 10;
+                }
+                .doc-container {
+                    padding: 2rem;
+                    display: flex; justify-content: center; width: 100%;
+                }
+                .notebook-style {
+                    width: 210mm;
+                    min-height: 297mm;
+                    background-color: #fff;
+                    background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
+                    background-size: 100% 1.5rem;
+                    padding: 3rem;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                    font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+                    line-height: 1.5rem;
+                    color: #333;
+                    position: relative;
+                }
+                .notebook-style::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 2.5rem;
+                    height: 100%;
+                    width: 2px;
+                    background-color: #f5a;
+                }
+                @media (max-width: 800px) {
+                    .notebook-style {
+                        width: 95%;
+                        min-height: auto;
+                        padding: 1rem;
+                        padding-left: 3rem;
+                    }
+                }
+            </style>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('.close-pres').onclick = () => modal.remove();
+        modal.querySelector('.export-pres').onclick = () => {
+             const element = document.getElementById('note-root').querySelector('.notebook-style');
+             const opt = {
+                margin: 0,
+                filename: 'notes.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
             html2pdf().set(opt).from(element).save();
         };
@@ -1213,6 +1439,7 @@ class UIHandler {
 
     loadSettings() {
         document.getElementById('theme-select').value = localStorage.getItem('ahamai_theme') || 'system';
+        document.getElementById('font-size-select').value = localStorage.getItem('ahamai_font_size') || 'medium';
         document.getElementById('language-select').value = localStorage.getItem('ahamai_language') || 'en';
         document.getElementById('custom-instructions').value = localStorage.getItem('ahamai_custom_instructions') || '';
         document.getElementById('tone-select').value = localStorage.getItem('ahamai_tone') || 'neutral';
@@ -1220,6 +1447,7 @@ class UIHandler {
 
     saveSettings() {
         const theme = document.getElementById('theme-select').value;
+        // Font size saved in real-time
         const language = document.getElementById('language-select').value;
         const instructions = document.getElementById('custom-instructions').value;
         const tone = document.getElementById('tone-select').value;
@@ -1232,7 +1460,7 @@ class UIHandler {
 
     applyTheme(theme) {
         // Simple theme implementation
-        document.body.classList.remove('dark-theme', 'amoled-theme', 'cream-orange-theme', 'water-color-theme', 'forest-theme');
+        document.body.classList.remove('dark-theme', 'amoled-theme', 'cream-orange-theme', 'water-color-theme', 'forest-theme', 'rose-theme');
 
         if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.body.classList.add('dark-theme');
@@ -1244,6 +1472,8 @@ class UIHandler {
             document.body.classList.add('water-color-theme');
         } else if (theme === 'forest') {
             document.body.classList.add('forest-theme');
+        } else if (theme === 'rose') {
+            document.body.classList.add('rose-theme');
         }
 
         // Persist override if explicitly set
@@ -1258,8 +1488,16 @@ class UIHandler {
             'download': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
             'pin': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>',
             'trash': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-            'incognito': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"></path><path d="M9.5 12c0 2.2-1.8 4-4 4s-4-1.8-4-4"></path><path d="M14.5 12c0 2.2 1.8 4 4 4s4-1.8 4-4"></path><path d="M12 12v-3"></path><path d="M12 9c-3 0-4-3-4-3h8s-1 3-4 3z"></path></svg>'
+            'incognito': '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path><circle cx="12" cy="12" r="10"></circle><path d="M3 10h18"></path></svg>', // Fallback placeholder
+            // Better Incognito Icon (Mask/Glasses)
+            'incognito': '<span class="incognito-emoji">🤫</span>'
         };
         return icons[name] || '';
+    }
+
+    applyFontSize(size) {
+        document.body.classList.remove('font-small', 'font-medium', 'font-large');
+        document.body.classList.add(`font-${size}`);
+        localStorage.setItem('ahamai_font_size', size);
     }
 }

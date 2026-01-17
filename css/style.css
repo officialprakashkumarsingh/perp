@@ -103,7 +103,7 @@ body {
 
 .logo {
     font-size: 1.5rem;
-    font-weight: 800;
+    font-weight: 500;
     font-family: var(--logo-font);
     display: flex;
     align-items: center;
@@ -250,6 +250,15 @@ body {
     background-color: var(--bg-color);
 }
 
+@keyframes shhh-anim {
+    0%, 90% { transform: scale(1); opacity: 0.7; }
+    92% { transform: scale(1.2); opacity: 1; }
+    94% { transform: rotate(-10deg) scale(1.2); }
+    96% { transform: rotate(10deg) scale(1.2); }
+    98% { transform: rotate(0) scale(1.2); }
+    100% { transform: scale(1); opacity: 0.7; }
+}
+
 #incognito-btn {
     background: transparent;
     border: none;
@@ -261,6 +270,12 @@ body {
     color: var(--text-primary);
     width: 32px; /* Ensure visibility */
     height: 32px;
+}
+
+#incognito-btn .incognito-emoji {
+    display: inline-block;
+    animation: shhh-anim 30s infinite ease-in-out;
+    line-height: 1;
 }
 
 #incognito-btn svg {
@@ -1664,4 +1679,127 @@ body.forest-theme #new-chat-btn:hover {
 body.forest-theme .history-item.pinned {
     background-color: #344C39;
     border-left-color: #8FA893;
+}
+
+/* Rose Theme */
+body.rose-theme {
+    --bg-color: #FCF8F8;
+    --sidebar-bg: #FBEFEF;
+    --border-color: #F9DFDF;
+    --text-primary: #2C2825;
+    --text-secondary: #7A6F6A;
+    --accent-color: #F5AFAF;
+    --accent-hover: #E89E9E;
+    --user-msg-bg: #FBEFEF;
+    --bot-msg-bg: transparent;
+    --input-bg: #FFFFFF;
+}
+
+body.rose-theme .history-item.pinned {
+    background-color: #F9E0E0;
+    border-left: 3px solid var(--accent-color);
+}
+
+/* Notebook Style */
+.notebook-style {
+    background-color: #fff;
+    background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
+    background-size: 100% 1.5rem;
+    padding: 2rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif; /* Fallback for handwritten feel */
+    line-height: 1.5rem;
+    color: #333;
+    position: relative;
+    margin: 1rem 0;
+    overflow-x: auto; /* Handle wide content */
+    max-width: 100%;
+}
+
+.notebook-style table,
+.notebook-style img,
+.notebook-style pre {
+    max-width: 100%;
+    height: auto;
+}
+
+.notebook-style::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 2rem;
+    height: 100%;
+    width: 2px;
+    background-color: #f5a; /* Red margin line */
+}
+
+/* Chart Container */
+.chart-wrapper {
+    position: relative;
+    margin: 1rem 0;
+    height: 300px;
+    width: 100%;
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+
+/* Font Sizes */
+body.font-small { font-size: 14px; }
+body.font-medium { font-size: 16px; }
+body.font-large { font-size: 18px; }
+
+/* Modify Popup */
+.modify-popup {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    padding: 0.5rem;
+    width: 220px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: 300px;
+    overflow-y: auto;
+    animation: fadeIn 0.2s;
+}
+
+@media (max-width: 600px) {
+    /* Mobile Action Buttons: Hide text */
+    .action-btn .btn-text {
+        display: none;
+    }
+
+    .action-btn {
+        padding: 0.5rem;
+        justify-content: center;
+    }
+
+    /* Modify Popup as Bottom Sheet */
+    .modify-popup {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        width: 100% !important;
+        max-height: 50dvh;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        padding: 1rem;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .modify-popup .extension-item {
+        padding: 0.8rem 1rem;
+        font-size: 1rem;
+        border-bottom: 1px solid #f5f5f5;
+    }
 }
