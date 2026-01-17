@@ -307,15 +307,15 @@ Capabilities:
 2. **Math & Science**: You can render mathematical and chemical formulas using LaTeX. Use standard LaTeX delimiters: $ for inline math and $$ for display math.
    Example: The area is $A = \pi r^2$.
 
-3. **Attachments**: The user may provide text from attached files (PDF, code, text, zip). Use this context to answer questions.
+3. **Attachments & YouTube**: The user may provide text from attached files (PDF, code, text, zip). You also have the capability to automatically read and summarize **YouTube videos** if the user provides a URL. Use this context to answer questions.
 
-4. **Image Generation**: You can generate images using Pollinations AI.
-   To generate an image, you MUST use this exact Markdown format:
-   \`![Image Description](https://image.pollinations.ai/prompt/{description}?width=768&height=1024&seed={random}&nologo=true)\`
-   Replace \`{description}\` with a URL-encoded detailed prompt for the image.
-   Replace \`{random}\` with a random integer seed (e.g. 12345).
-   Example: \`![A futuristic city](https://image.pollinations.ai/prompt/futuristic%20city%20sunset?width=768&height=1024&seed=54321&nologo=true)\`
-   Do NOT use any other API or format. Generate images when the user explicitly asks or when it adds significant value.
+4. **Image Generation**: You can generate images.
+   To generate an image, output a specific tag strictly in this format:
+   \`[IMAGE: {prompt} | n={number}]\`
+   Replace \`{prompt}\` with a detailed description of the image.
+   Replace \`{number}\` with the number of images to generate (default 1).
+   Example: \`[IMAGE: A beautiful sunset over mountains | n=1]\`
+   Do not output Markdown links for images. Use this tag only.
 
 5. **Presentations**: You can generate stylish, themed presentations.
    To do this, output a single HTML block containing multiple \`<div class="slide">\` elements.
@@ -373,12 +373,41 @@ Capabilities:
    </div>
    \`\`\`
 
+10. **Charts**: You can generate interactive charts (Bar, Line, Pie, Doughnut, Radar) using Chart.js.
+    To generate a chart, output a JSON object wrapped in \`[CHART_JSON]\` tags.
+    Format:
+    \`[CHART_JSON]
+    {
+      "type": "bar",
+      "data": {
+        "labels": ["A", "B", "C"],
+        "datasets": [{ "label": "Label", "data": [10, 20, 30], "backgroundColor": ["#FF6384", "#36A2EB", "#FFCE56"] }]
+      },
+      "options": { ... }
+    }
+    [/CHART_JSON]\`
+    Always ensure the JSON is valid. Use bright colors.
+
+11. **Notebook Notes**: You can generate "notebook style" notes which look like handwritten notes on lined paper.
+    Use this when the user asks for "notes", "study notes", or "notebook style".
+    Wrap the content in a \`<div class="notebook-style">\` container.
+    Use headings, bullet points, and highlighting (\`<mark>\` tag) to make it effective.
+    Example:
+    \`\`\`html
+    <div class="notebook-style">
+      <h2>Title</h2>
+      <p>Important concept...</p>
+      <ul><li>Point 1</li></ul>
+    </div>
+    \`\`\`
+
 Instructions:
-- If the user asks to "draw" or "visualize" a system, process, or chart, ALWAYS provide a Mermaid diagram.
+- If the user asks to "draw" or "visualize" a system, process, or chart, check if a generic Mermaid diagram or a quantitative Chart.js chart is better. For quantitative data, use \`[CHART_JSON]\`. For flows, use Mermaid.
 - If the user asks for a "presentation" or "slides", generate the HTML slide format described above.
 - If the user asks for a "quiz", generate the JSON quiz format.
 - If the user asks for "flashcards", generate the JSON flashcards format.
 - If the user asks for a "PDF" or "Document", generate the HTML Document format.
+- If the user asks for "notes" or "notebook", generate the HTML Notebook format.
 - If you learn something new and specific about the user (e.g., name, profession, preferences), output a memory tag at the end of your response like this: \`[MEMORY: User is a software engineer]\`.
 - Be concise and helpful.
 `;
@@ -476,14 +505,72 @@ Instructions:
 
             // Clean response for display (remove memory tags)
             finalAnswer = fullResponse.replace(memoryRegex, '').trim();
-            uiHandler.updateBotMessage(contentDiv, finalAnswer); // Update final clean message
+
+            // Handle Image Generation Tags
+            const imageRegex = /\[IMAGE:\s*(.*?)\s*\|\s*n=(\d+)\]/g;
+            let imgMatch;
+            const imageTasks = [];
+
+            // Replace tags with placeholders and collect tasks
+            finalAnswer = finalAnswer.replace(imageRegex, (match, prompt, n) => {
+                const placeholderId = `img-gen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                imageTasks.push({ id: placeholderId, prompt, n });
+                return `<div id="${placeholderId}" class="image-generating">Generating Image: ${prompt}...</div>`;
+            });
+
+            uiHandler.updateBotMessage(contentDiv, finalAnswer); // Update final clean message with placeholders
+
+            // Process Image Tasks
+            if (imageTasks.length > 0) {
+                 for (const task of imageTasks) {
+                     try {
+                         const urls = await apiHandler.generateImage(task.prompt, task.n);
+                         let imgHtml = "";
+                         if (urls && urls.length > 0) {
+                             if (urls.length === 1) {
+                                 imgHtml = `![${task.prompt}](${urls[0]})`;
+                             } else {
+                                 // Grid for multiple
+                                 imgHtml = `<div class="image-grid">${urls.map(u => `<img src="${u}" alt="${task.prompt}">`).join('')}</div>`;
+                             }
+                         }
+
+                         // Update finalAnswer for storage
+                         // We reconstruct because we can't easily replace ID in string without regex again
+                         // Simpler: Just update the DOM element now, and update finalAnswer string for history
+
+                         // Update DOM
+                         const placeholder = document.getElementById(task.id);
+                         if (placeholder) {
+                             // If single image, standard markdown render in UI updates
+                             // But here we need to insert HTML or force re-render
+                             // Let's replace placeholder with markdown text in finalAnswer and re-render
+                             const originalTag = `[IMAGE: ${task.prompt} | n=${task.n}]`;
+                             // Actually, we replaced it with div in finalAnswer variable.
+                             // Let's replace the DIV string in finalAnswer with the Markdown Image
+                             const divString = `<div id="${task.id}" class="image-generating">Generating Image: ${task.prompt}...</div>`;
+                             finalAnswer = finalAnswer.replace(divString, imgHtml);
+                         }
+                     } catch (e) {
+                         console.error("Image Gen Error", e);
+                         const divString = `<div id="${task.id}" class="image-generating">Generating Image: ${task.prompt}...</div>`;
+                         finalAnswer = finalAnswer.replace(divString, `*[Error generating image: ${task.prompt}]*`);
+                     }
+                 }
+                 // Re-render final message with images
+                 uiHandler.updateBotMessage(contentDiv, finalAnswer);
+            }
 
             uiHandler.setStopMode(false);
 
             // Show Actions (Copy, Regenerate, Export)
-            uiHandler.addMessageActions(actionsDiv, contentDiv, () => {
+            uiHandler.addMessageActions(actionsDiv, contentDiv, (modifier) => {
                 // Regenerate logic: Call submit with same query
-                handleUserSubmit(query, model, isSearchEnabled, isStudyMode, attachment);
+                let newQuery = query;
+                if (typeof modifier === 'string') {
+                    newQuery = `${query}\n\n[Instruction: Re-write the above response with the following style/modification: ${modifier}]`;
+                }
+                handleUserSubmit(newQuery, model, isSearchEnabled, isStudyMode, attachment);
             });
 
         } catch (error) {
@@ -526,6 +613,6 @@ Instructions:
         window.history.replaceState({}, document.title, newUrl);
 
         // Trigger submit
-        handleUserSubmit(queryParam, CONFIG.MODELS[0], true, false, null);
+    handleUserSubmit(queryParam, CONFIG.MODELS[0], true, false, false);
     }
 });
