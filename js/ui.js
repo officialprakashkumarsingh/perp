@@ -14,6 +14,7 @@ class UIHandler {
         this.incognitoBtn = document.getElementById('incognito-btn');
         this.welcomeTitle = document.getElementById('welcome-title');
         this.fileInput = null;
+        this.historyInput = null;
         this.currentAttachment = null;
         this.onHistoryAction = null;
         this.isIncognito = false;
@@ -45,6 +46,13 @@ class UIHandler {
         this.fileInput.accept = '.pdf,.txt,.zip,.js,.py,.html,.css,.json,.md';
         this.fileInput.style.display = 'none';
         document.body.appendChild(this.fileInput);
+
+        // Create history file input hidden
+        this.historyInput = document.createElement('input');
+        this.historyInput.type = 'file';
+        this.historyInput.accept = '.json,.html';
+        this.historyInput.style.display = 'none';
+        document.body.appendChild(this.historyInput);
 
         // Extension Button Logic
         const leftControls = document.querySelector('.left-controls');
@@ -93,6 +101,68 @@ class UIHandler {
         if (wikiSwitch) {
             wikiSwitch.addEventListener('change', () => this.updateExtensionIconState());
         }
+
+        // Browser History Toggle
+        const historySwitch = document.getElementById('history-switch');
+        if (historySwitch) {
+            historySwitch.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    if (confirm("Browser security prevents direct history access.\n\nTo allow AI access, please upload your browser history file (JSON export).\n\nDo you want to upload it now?")) {
+                        this.historyInput.click();
+                    } else {
+                        e.target.checked = false;
+                        this.updateExtensionIconState();
+                    }
+                } else {
+                    window.userBrowserHistory = null;
+                    this.updateExtensionIconState();
+                }
+            });
+        }
+
+        // Handle History File
+        this.historyInput.addEventListener('change', (e) => {
+            if (this.historyInput.files.length > 0) {
+                const file = this.historyInput.files[0];
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const content = ev.target.result;
+                        let history = [];
+                        try {
+                            const json = JSON.parse(content);
+                            if (Array.isArray(json)) {
+                                history = json;
+                            } else if (json['Browser History']) {
+                                history = json['Browser History'];
+                            } else {
+                                const values = Object.values(json).find(v => Array.isArray(v));
+                                if (values) history = values;
+                            }
+                        } catch (err) {
+                            console.error("Parse error", err);
+                        }
+
+                        if (history && history.length > 0) {
+                            window.userBrowserHistory = history;
+                            alert(`Successfully loaded ${history.length} history items.`);
+                        } else {
+                            alert("Could not parse history file. Please use a valid JSON export.");
+                            if (historySwitch) historySwitch.checked = false;
+                        }
+                    } catch (err) {
+                        console.error("Error reading history", err);
+                        alert("Error reading file.");
+                        if (historySwitch) historySwitch.checked = false;
+                    }
+                    this.updateExtensionIconState();
+                };
+                reader.readAsText(file);
+            } else {
+                if (historySwitch) historySwitch.checked = false;
+                this.updateExtensionIconState();
+            }
+        });
 
         // File selection
         this.fileInput.addEventListener('change', (e) => {
@@ -347,9 +417,10 @@ class UIHandler {
         const isSearch = document.getElementById('search-switch').checked;
         const isStudy = document.getElementById('study-switch').checked;
         const isWiki = document.getElementById('wiki-switch') ? document.getElementById('wiki-switch').checked : false;
+        const isHistory = document.getElementById('history-switch') ? document.getElementById('history-switch').checked : false;
         const hasFile = !!this.currentAttachment;
 
-        if (isSearch || isStudy || hasFile || isWiki) {
+        if (isSearch || isStudy || hasFile || isWiki || isHistory) {
             extBtn.classList.add('active-dot');
         } else {
             extBtn.classList.remove('active-dot');

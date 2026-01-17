@@ -1,45 +1,54 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
+import re
 
-def verify_queue_and_font(page):
-    page.goto("http://localhost:8080")
+def run(playwright):
+    browser = playwright.chromium.launch(headless=True)
+    page = browser.new_page()
+    page.goto("http://localhost:8000")
 
-    # 1. Verify Font
-    font_family = page.locator(".sidebar .logo").evaluate("el => getComputedStyle(el).fontFamily")
-    print(f"Logo Font: {font_family}")
+    # 1. Verify Amoled Theme
+    print("Opening Settings...")
+    # Use force=True because sometimes settings button might be obstructed or sidebar logic
+    page.locator("#settings-btn").click()
+    expect(page.locator("#settings-modal")).to_be_visible()
 
-    # 2. Verify Incognito Icon
-    page.set_viewport_size({"width": 375, "height": 812})
-    icon_width = page.locator("#incognito-btn").evaluate("el => getComputedStyle(el).width")
-    print(f"Incognito Btn Width: {icon_width}")
-    page.screenshot(path="verification_mobile_header.png")
+    print("Selecting Amoled Theme...")
+    page.select_option("#theme-select", "amoled")
 
-    # 3. Verify Queue Logic
-    page.set_viewport_size({"width": 1280, "height": 720})
+    # Check body class and background color
+    expect(page.locator("body")).to_have_class(re.compile(r"amoled-theme"))
 
-    # Just check if element exists, don't wait for visibility if it's hidden
-    if page.locator("#queue-panel").count() > 0:
-        print("Queue panel exists.")
+    # Wait for transition if any
+    page.wait_for_timeout(500)
 
-    # Manually invoke JS to simulate queue
-    page.evaluate("window.uiHandler.updateQueuePanel([{query: 'Queued Message 1'}, {query: 'Queued Message 2'}])")
+    bg_color = page.evaluate("getComputedStyle(document.body).backgroundColor")
+    print(f"Body Background Color: {bg_color}")
 
-    # Now it should be visible
-    page.wait_for_selector("#queue-panel", state="visible")
+    if "rgb(0, 0, 0)" in bg_color or "rgba(0, 0, 0" in bg_color:
+        print("SUCCESS: Background is black.")
+    else:
+        print(f"FAILURE: Background is {bg_color}")
 
-    # Click toggle to expand list if needed (default might be block/none check logic)
-    # The toggle logic toggles the list display
-    page.click("#queue-toggle")
+    page.screenshot(path="verification_amoled.png")
 
-    page.screenshot(path="verification_queue_panel.png")
-    print("Queue panel visible and toggled.")
+    # Close settings
+    page.locator(".close-modal").click()
+
+    # 2. Verify Browser History Toggle
+    print("Opening Extension Sheet...")
+    # The button is dynamically added with class 'attach-btn' and id 'extension-btn'
+    # Wait for it to exist
+    page.wait_for_selector("#extension-btn")
+    page.click("#extension-btn")
+
+    expect(page.locator("#extension-sheet")).to_be_visible()
+    expect(page.locator("#sheet-history")).to_be_visible()
+
+    print("Extension sheet visible. Taking screenshot...")
+    page.screenshot(path="verification_extensions.png")
+
+    browser.close()
 
 if __name__ == "__main__":
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        try:
-            verify_queue_and_font(page)
-        except Exception as e:
-            print(f"Error: {e}")
-        finally:
-            browser.close()
+    with sync_playwright() as playwright:
+        run(playwright)
