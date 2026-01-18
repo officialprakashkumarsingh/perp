@@ -512,10 +512,20 @@ Instructions:
 
             // Stream response
             let fullResponse = "";
+            let lastUpdateTimestamp = 0;
+
             await apiHandler.chatCompletion(messages, model, (chunk) => {
                 fullResponse += chunk;
-                uiHandler.updateBotMessage(contentDiv, fullResponse, true);
+                const now = Date.now();
+                // Throttle updates to ~60fps (16ms) or even slower (50ms) for performance
+                if (now - lastUpdateTimestamp > 50) {
+                    uiHandler.updateBotMessage(contentDiv, fullResponse, true);
+                    lastUpdateTimestamp = now;
+                }
             }, abortController.signal);
+
+            // Final stream update to ensure we see everything before processing
+            uiHandler.updateBotMessage(contentDiv, fullResponse, true);
 
             // Process Memories in response
             const memoryRegex = /\[MEMORY: (.*?)\]/g;

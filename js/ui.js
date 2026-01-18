@@ -645,9 +645,25 @@ class UIHandler {
         }
 
         let markdownHtml = "";
-        if (typeof marked !== 'undefined') {
-            markdownHtml = marked.parse(cleanText);
-        } else {
+        try {
+            // Check for marked in different ways to be robust
+            const markedLib = window.marked || (typeof marked !== 'undefined' ? marked : null);
+
+            if (markedLib) {
+                // Handle both object with parse method (v4+) and function (old)
+                if (typeof markedLib.parse === 'function') {
+                    markdownHtml = markedLib.parse(cleanText);
+                } else if (typeof markedLib === 'function') {
+                    markdownHtml = markedLib(cleanText);
+                } else {
+                    markdownHtml = this.escapeHtml(cleanText);
+                }
+            } else {
+                console.warn('Marked library not found, falling back to simple escape');
+                markdownHtml = this.escapeHtml(cleanText);
+            }
+        } catch (e) {
+            console.error('Error parsing markdown:', e);
             markdownHtml = this.escapeHtml(cleanText);
         }
 
@@ -656,6 +672,14 @@ class UIHandler {
         }
 
         container.innerHTML = markdownHtml;
+
+        // SKIP HEAVY RENDERING DURING STREAMING TO REDUCE JITTER
+        if (isStreaming) {
+            this.scrollToBottom();
+            return;
+        }
+
+        // --- BELOW THIS LINE ONLY RUNS WHEN STREAMING IS COMPLETE ---
 
         // Render Widgets
         if (quizDataToRender) {
