@@ -107,12 +107,7 @@ class UIHandler {
         if (historySwitch) {
             historySwitch.addEventListener('change', (e) => {
                 if (e.target.checked) {
-                    if (confirm("Browser security prevents direct history access.\n\nTo allow AI access, please upload your browser history file (JSON export).\n\nDo you want to upload it now?")) {
-                        this.historyInput.click();
-                    } else {
-                        e.target.checked = false;
-                        this.updateExtensionIconState();
-                    }
+                    this.requestHistoryPermission(historySwitch);
                 } else {
                     window.userBrowserHistory = null;
                     this.updateExtensionIconState();
@@ -610,7 +605,7 @@ class UIHandler {
         if (loadingElement) loadingElement.remove();
     }
 
-    updateBotMessage(container, text) {
+    updateBotMessage(container, text, isStreaming = false) {
         let cleanText = text;
         let quizDataToRender = null;
         let flashcardsDataToRender = null;
@@ -654,6 +649,10 @@ class UIHandler {
             markdownHtml = marked.parse(cleanText);
         } else {
             markdownHtml = this.escapeHtml(cleanText);
+        }
+
+        if (isStreaming) {
+            markdownHtml += '<span class="typing-cursor"></span>';
         }
 
         container.innerHTML = markdownHtml;
@@ -1400,6 +1399,40 @@ class UIHandler {
             li.textContent = item.query.substring(0, 30) + (item.query.length > 30 ? '...' : '');
             this.queueList.appendChild(li);
         });
+    }
+
+    requestHistoryPermission(switchElement) {
+        // Create Permission Modal
+        const modal = document.createElement('div');
+        modal.className = 'modal open';
+        modal.style.zIndex = '3000';
+
+        modal.innerHTML = `
+            <div class="modal-content permission-modal-content">
+                <div class="permission-icon">🕰️</div>
+                <h3>Allow "AhamAI" to access your browsing history?</h3>
+                <p style="color:var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">
+                    This allows the AI to provide personalized answers based on websites you've visited.
+                </p>
+                <div class="permission-buttons">
+                    <button class="btn-secondary" id="perm-deny">Deny</button>
+                    <button class="btn-primary" id="perm-allow">Allow</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('#perm-deny').onclick = () => {
+            switchElement.checked = false;
+            modal.remove();
+            this.updateExtensionIconState();
+        };
+
+        modal.querySelector('#perm-allow').onclick = () => {
+            modal.remove();
+            // Trigger file input immediately to preserve user gesture
+            this.historyInput.click();
+        };
     }
 
     // History UI Methods

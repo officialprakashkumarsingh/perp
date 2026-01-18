@@ -514,7 +514,7 @@ Instructions:
             let fullResponse = "";
             await apiHandler.chatCompletion(messages, model, (chunk) => {
                 fullResponse += chunk;
-                uiHandler.updateBotMessage(contentDiv, fullResponse);
+                uiHandler.updateBotMessage(contentDiv, fullResponse, true);
             }, abortController.signal);
 
             // Process Memories in response
