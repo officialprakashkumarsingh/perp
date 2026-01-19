@@ -1434,13 +1434,14 @@ class UIHandler {
         modal.innerHTML = `
             <div class="modal-content permission-modal-content">
                 <div class="permission-icon">🕰️</div>
-                <h3>Allow "AhamAI" to access your browsing history?</h3>
-                <p style="color:var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">
-                    This allows the AI to provide personalized answers based on websites you've visited.
+                <h3>Access Browser History</h3>
+                <p style="color:var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.5;">
+                    To allow the AI to read your browser history, you must upload your history file (JSON format).<br>
+                    <span style="font-size: 0.8em; opacity: 0.8;">(Browsers restrict direct access for security)</span>
                 </p>
                 <div class="permission-buttons">
-                    <button class="btn-secondary" id="perm-deny">Deny</button>
-                    <button class="btn-primary" id="perm-allow">Allow</button>
+                    <button class="btn-secondary" id="perm-deny">Cancel</button>
+                    <button class="btn-primary" id="perm-allow">Select File</button>
                 </div>
             </div>
         `;
