@@ -14,6 +14,7 @@ class UIHandler {
         this.incognitoBtn = document.getElementById('incognito-btn');
         this.welcomeTitle = document.getElementById('welcome-title');
         this.fileInput = null;
+        this.historyInput = null;
         this.currentAttachment = null;
         this.onHistoryAction = null;
         this.isIncognito = false;
@@ -45,6 +46,13 @@ class UIHandler {
         this.fileInput.accept = '.pdf,.txt,.zip,.js,.py,.html,.css,.json,.md';
         this.fileInput.style.display = 'none';
         document.body.appendChild(this.fileInput);
+
+        // Create history file input hidden
+        this.historyInput = document.createElement('input');
+        this.historyInput.type = 'file';
+        this.historyInput.accept = '.json,.html';
+        this.historyInput.style.display = 'none';
+        document.body.appendChild(this.historyInput);
 
         // Extension Button Logic
         const leftControls = document.querySelector('.left-controls');
@@ -93,6 +101,63 @@ class UIHandler {
         if (wikiSwitch) {
             wikiSwitch.addEventListener('change', () => this.updateExtensionIconState());
         }
+
+        // Browser History Toggle
+        const historySwitch = document.getElementById('history-switch');
+        if (historySwitch) {
+            historySwitch.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.requestHistoryPermission(historySwitch);
+                } else {
+                    window.userBrowserHistory = null;
+                    this.updateExtensionIconState();
+                }
+            });
+        }
+
+        // Handle History File
+        this.historyInput.addEventListener('change', (e) => {
+            if (this.historyInput.files.length > 0) {
+                const file = this.historyInput.files[0];
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const content = ev.target.result;
+                        let history = [];
+                        try {
+                            const json = JSON.parse(content);
+                            if (Array.isArray(json)) {
+                                history = json;
+                            } else if (json['Browser History']) {
+                                history = json['Browser History'];
+                            } else {
+                                const values = Object.values(json).find(v => Array.isArray(v));
+                                if (values) history = values;
+                            }
+                        } catch (err) {
+                            console.error("Parse error", err);
+                        }
+
+                        if (history && history.length > 0) {
+                            window.userBrowserHistory = history;
+                            alert(`Successfully loaded ${history.length} history items.`);
+                        } else {
+                            alert("Could not parse history file. Please use a valid JSON export.");
+                            if (historySwitch) historySwitch.checked = false;
+                        }
+                    } catch (err) {
+                        console.error("Error reading history", err);
+                        alert("Error reading file.");
+                        if (historySwitch) historySwitch.checked = false;
+                    }
+                    this.updateExtensionIconState();
+                };
+                reader.readAsText(file);
+            } else {
+                if (historySwitch) historySwitch.checked = false;
+                this.updateExtensionIconState();
+            }
+        });
 
         // File selection
         this.fileInput.addEventListener('change', (e) => {
@@ -347,9 +412,10 @@ class UIHandler {
         const isSearch = document.getElementById('search-switch').checked;
         const isStudy = document.getElementById('study-switch').checked;
         const isWiki = document.getElementById('wiki-switch') ? document.getElementById('wiki-switch').checked : false;
+        const isHistory = document.getElementById('history-switch') ? document.getElementById('history-switch').checked : false;
         const hasFile = !!this.currentAttachment;
 
-        if (isSearch || isStudy || hasFile || isWiki) {
+        if (isSearch || isStudy || hasFile || isWiki || isHistory) {
             extBtn.classList.add('active-dot');
         } else {
             extBtn.classList.remove('active-dot');
@@ -539,7 +605,7 @@ class UIHandler {
         if (loadingElement) loadingElement.remove();
     }
 
-    updateBotMessage(container, text) {
+    updateBotMessage(container, text, isStreaming = false) {
         let cleanText = text;
         let quizDataToRender = null;
         let flashcardsDataToRender = null;
@@ -579,13 +645,41 @@ class UIHandler {
         }
 
         let markdownHtml = "";
-        if (typeof marked !== 'undefined') {
-            markdownHtml = marked.parse(cleanText);
-        } else {
+        try {
+            // Check for marked in different ways to be robust
+            const markedLib = window.marked || (typeof marked !== 'undefined' ? marked : null);
+
+            if (markedLib) {
+                // Handle both object with parse method (v4+) and function (old)
+                if (typeof markedLib.parse === 'function') {
+                    markdownHtml = markedLib.parse(cleanText);
+                } else if (typeof markedLib === 'function') {
+                    markdownHtml = markedLib(cleanText);
+                } else {
+                    markdownHtml = this.escapeHtml(cleanText);
+                }
+            } else {
+                console.warn('Marked library not found, falling back to simple escape');
+                markdownHtml = this.escapeHtml(cleanText);
+            }
+        } catch (e) {
+            console.error('Error parsing markdown:', e);
             markdownHtml = this.escapeHtml(cleanText);
         }
 
+        if (isStreaming) {
+            markdownHtml += '<span class="typing-cursor"></span>';
+        }
+
         container.innerHTML = markdownHtml;
+
+        // SKIP HEAVY RENDERING DURING STREAMING TO REDUCE JITTER
+        if (isStreaming) {
+            this.scrollToBottom();
+            return;
+        }
+
+        // --- BELOW THIS LINE ONLY RUNS WHEN STREAMING IS COMPLETE ---
 
         // Render Widgets
         if (quizDataToRender) {
@@ -1329,6 +1423,41 @@ class UIHandler {
             li.textContent = item.query.substring(0, 30) + (item.query.length > 30 ? '...' : '');
             this.queueList.appendChild(li);
         });
+    }
+
+    requestHistoryPermission(switchElement) {
+        // Create Permission Modal
+        const modal = document.createElement('div');
+        modal.className = 'modal open';
+        modal.style.zIndex = '3000';
+
+        modal.innerHTML = `
+            <div class="modal-content permission-modal-content">
+                <div class="permission-icon">🕰️</div>
+                <h3>Access Browser History</h3>
+                <p style="color:var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.5;">
+                    To allow the AI to read your browser history, you must upload your history file (JSON format).<br>
+                    <span style="font-size: 0.8em; opacity: 0.8;">(Browsers restrict direct access for security)</span>
+                </p>
+                <div class="permission-buttons">
+                    <button class="btn-secondary" id="perm-deny">Cancel</button>
+                    <button class="btn-primary" id="perm-allow">Select File</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('#perm-deny').onclick = () => {
+            switchElement.checked = false;
+            modal.remove();
+            this.updateExtensionIconState();
+        };
+
+        modal.querySelector('#perm-allow').onclick = () => {
+            modal.remove();
+            // Trigger file input immediately to preserve user gesture
+            this.historyInput.click();
+        };
     }
 
     // History UI Methods

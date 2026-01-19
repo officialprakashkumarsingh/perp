@@ -292,6 +292,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // Browser History Search
+            if (window.userBrowserHistory && window.userBrowserHistory.length > 0 && query.trim().length > 0) {
+                 const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+                 if (terms.length > 0) {
+                     const relevant = window.userBrowserHistory.filter(item => {
+                         const str = ((item.title || '') + ' ' + (item.url || '')).toLowerCase();
+                         return terms.some(term => str.includes(term));
+                     }).slice(0, 10); // Top 10
+
+                     if (relevant.length > 0) {
+                         let historyContext = `\n\n--- RELEVANT USER BROWSER HISTORY ---\n`;
+                         relevant.forEach((item, idx) => {
+                             let timeStr = "Unknown";
+                             if (item.time_usec) timeStr = new Date(item.time_usec / 1000).toLocaleString();
+                             else if (item.lastVisitTime) timeStr = new Date(item.lastVisitTime).toLocaleString();
+
+                             historyContext += `[${idx+1}] Title: ${item.title || 'No Title'}\nURL: ${item.url}\nTime: ${timeStr}\n\n`;
+                         });
+                         historyContext += `--- END HISTORY ---\n`;
+
+                         if (searchContext) searchContext += historyContext;
+                         else searchContext = historyContext;
+                     }
+                 }
+            }
+
             // 2. Prepare Context with Date/Time and Capabilities
             const currentDate = new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'medium' });
             let systemPrompt = `Current Date and Time: ${currentDate}. You are AhamAI, a helpful AI assistant.
@@ -486,10 +512,20 @@ Instructions:
 
             // Stream response
             let fullResponse = "";
+            let lastUpdateTimestamp = 0;
+
             await apiHandler.chatCompletion(messages, model, (chunk) => {
                 fullResponse += chunk;
-                uiHandler.updateBotMessage(contentDiv, fullResponse);
+                const now = Date.now();
+                // Throttle updates to ~60fps (16ms) or even slower (50ms) for performance
+                if (now - lastUpdateTimestamp > 50) {
+                    uiHandler.updateBotMessage(contentDiv, fullResponse, true);
+                    lastUpdateTimestamp = now;
+                }
             }, abortController.signal);
+
+            // Final stream update to ensure we see everything before processing
+            uiHandler.updateBotMessage(contentDiv, fullResponse, true);
 
             // Process Memories in response
             const memoryRegex = /\[MEMORY: (.*?)\]/g;
