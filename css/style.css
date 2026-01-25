@@ -614,3 +614,241 @@ body.amoled-theme .bot-message-content pre {
     margin-left: 1.5rem;
     margin-bottom: 1rem;
 }
+
+/* --- Missing Components Fix --- */
+
+/* Extension Sheet */
+.extension-sheet {
+    display: none; /* Hidden by default */
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 0.5rem;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    z-index: 1000;
+    min-width: 250px;
+    flex-direction: column;
+}
+
+body.amoled-theme .extension-sheet {
+    background-color: #000;
+    border-color: #333;
+}
+
+.extension-sheet.open {
+    display: flex;
+}
+
+.extension-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: var(--radius-md);
+    transition: background 0.2s;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    position: relative;
+    user-select: none;
+}
+
+.extension-item:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+body.dark-theme .extension-item:hover,
+body.amoled-theme .extension-item:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+.ext-icon {
+    font-size: 1.1rem;
+    width: 24px;
+    text-align: center;
+}
+
+.extension-separator {
+    padding: 0.5rem 1rem 0.25rem 1rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    margin-left: auto;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--accent-color);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--accent-color);
+}
+
+input:checked + .slider:before {
+    -webkit-transform: translateX(16px);
+    -ms-transform: translateX(16px);
+    transform: translateX(16px);
+}
+
+body.dark-theme .slider,
+body.amoled-theme .slider {
+    background-color: #555;
+}
+
+/* Attachment Chip */
+.attachment-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: rgba(0,0,0,0.05);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    margin-right: 0.5rem;
+    border: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+body.dark-theme .attachment-chip,
+body.amoled-theme .attachment-chip {
+    background-color: rgba(255,255,255,0.1);
+}
+
+.attachment-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    line-height: 1;
+    padding: 0;
+}
+
+.attachment-remove:hover {
+    color: var(--text-primary);
+    background-color: rgba(0,0,0,0.1);
+}
+
+/* Active Dot for Extension Button */
+.active-dot::after {
+    content: '';
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+    border: 2px solid var(--input-bg);
+}
+
+/* Modify Popup */
+.modify-popup {
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    z-index: 100;
+    min-width: 180px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+body.amoled-theme .modify-popup {
+    background-color: #000;
+    border-color: #333;
+}
+
+/* Mobile Adjustments for Sheet */
+@media (max-width: 768px) {
+    .extension-sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        margin-bottom: 0;
+        border: 1px solid var(--border-color);
+        border-bottom: none;
+        animation: slideUp 0.3s ease;
+        z-index: 2200;
+        max-height: 60vh;
+        overflow-y: auto;
+        padding-bottom: 2rem; /* Safe area */
+    }
+
+    @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+    }
+
+    .modify-popup {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        max-height: 50vh;
+        z-index: 2200;
+        animation: slideUp 0.3s ease;
+    }
+}
